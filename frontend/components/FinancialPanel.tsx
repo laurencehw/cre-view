@@ -24,13 +24,10 @@ export default function FinancialPanel({ building, financials, details }: Financ
 
   // Weighted average interest rate across all debt tranches
   const debtTranches = [debt.seniorLoan, ...(debt.mezz ? [debt.mezz] : [])];
-  const weightedAvgRate =
-    debt.totalDebt > 0
-      ? debtTranches.reduce((sum, t) => sum + t.amount * t.interestRate, 0) / debt.totalDebt
-      : 0;
+  const annualDebtService = debtTranches.reduce((sum, t) => sum + t.amount * t.interestRate, 0);
+  const weightedAvgRate = debt.totalDebt > 0 ? annualDebtService / debt.totalDebt : 0;
 
   // Debt Service Coverage Ratio: NOI / annual debt service (simplified as interest-only)
-  const annualDebtService = debtTranches.reduce((sum, t) => sum + t.amount * t.interestRate, 0);
   const dscr = annualDebtService > 0 ? valuation.noi / annualDebtService : 0;
 
   return (

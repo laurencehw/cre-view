@@ -120,8 +120,8 @@ export function optionalAuth(req: Request, res: Response, next: NextFunction): v
   if (authHeader?.startsWith('Bearer ')) {
     try {
       req.user = verifyToken(authHeader.slice(7));
-    } catch {
-      // Token invalid — continue without user context
+    } catch (err) {
+      console.debug('optionalAuth: token verification failed:', err instanceof Error ? err.message : err);
     }
   }
   next();
