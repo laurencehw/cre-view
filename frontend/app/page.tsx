@@ -4,6 +4,8 @@ import { useState, useRef, useCallback } from 'react';
 import ImageCapture from '@/components/ImageCapture';
 import BuildingCard from '@/components/BuildingCard';
 import FinancialPanel from '@/components/FinancialPanel';
+import SkylineOverlay from '@/components/SkylineOverlay';
+import BuildingMap from '@/components/BuildingMap';
 import type { DetectedBuilding, Building, BuildingFinancials } from '@/lib/types';
 
 export default function HomePage() {
@@ -16,6 +18,8 @@ export default function HomePage() {
   const [isLoadingFinancials, setIsLoadingFinancials] = useState(false);
   const [financialError, setFinancialError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [allBuildingDetails, setAllBuildingDetails] = useState<Building[]>([]);
 
   // Track the latest financial fetch to prevent race conditions
   const latestFetchRef = useRef<string | null>(null);
@@ -27,7 +31,12 @@ export default function HomePage() {
     setDetectedBuildings([]);
     setSelectedBuilding(null);
     setFinancials(null);
+    setAllBuildingDetails([]);
     setIsAnalyzing(true);
+
+    // Store preview URL for the overlay
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    setImagePreviewUrl(URL.createObjectURL(file));
 
     try {
       const formData = new FormData();
@@ -51,7 +60,17 @@ export default function HomePage() {
       }
 
       const data = await res.json();
-      setDetectedBuildings(data.detectedBuildings ?? []);
+      const detected: DetectedBuilding[] = data.detectedBuildings ?? [];
+      setDetectedBuildings(detected);
+
+      // Fetch building details for the map
+      const detailPromises = detected.map((b) =>
+        fetch(`${apiUrl}/api/buildings/${b.buildingId}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null),
+      );
+      const details = (await Promise.all(detailPromises)).filter(Boolean) as Building[];
+      setAllBuildingDetails(details);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unexpected error');
     } finally {
@@ -131,6 +150,20 @@ export default function HomePage() {
             </div>
           )}
 
+          {imagePreviewUrl && detectedBuildings.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
+                Analysis Result
+              </h2>
+              <SkylineOverlay
+                imageSrc={imagePreviewUrl}
+                buildings={detectedBuildings}
+                selectedBuildingId={selectedBuilding?.buildingId}
+                onBuildingClick={handleBuildingSelect}
+              />
+            </div>
+          )}
+
           {detectedBuildings.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
@@ -166,7 +199,20 @@ export default function HomePage() {
         {/* Right panel — financial detail */}
         <section className="flex-1 overflow-auto">
           {selectedBuilding && financials ? (
-            <FinancialPanel building={selectedBuilding} financials={financials} details={buildingDetails} />
+            <div>
+              <FinancialPanel building={selectedBuilding} financials={financials} details={buildingDetails} />
+              {allBuildingDetails.length > 0 && (
+                <div className="px-6 pb-6 max-w-3xl mx-auto">
+                  <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                    Building Locations
+                  </h3>
+                  <BuildingMap
+                    buildings={allBuildingDetails}
+                    selectedBuildingId={buildingDetails?.id}
+                  />
+                </div>
+              )}
+            </div>
           ) : selectedBuilding && financialError ? (
             <div className="flex items-center justify-center h-full p-8">
               <div className="rounded-lg bg-red-900/30 border border-red-800 p-4 text-sm text-red-300 max-w-sm text-center">
@@ -176,6 +222,13 @@ export default function HomePage() {
           ) : selectedBuilding && isLoadingFinancials ? (
             <div className="flex items-center justify-center h-full text-gray-500">
               Loading financial data…
+            </div>
+          ) : detectedBuildings.length > 0 && allBuildingDetails.length > 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-6 p-8">
+              <p className="text-gray-500 text-lg">Select a building to view financial data</p>
+              <div className="w-full max-w-lg">
+                <BuildingMap buildings={allBuildingDetails} />
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-gray-600 p-8">
