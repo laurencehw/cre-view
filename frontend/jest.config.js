@@ -4,7 +4,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
-  testMatch: ['**/__tests__/**/*.test.(ts|tsx)'],
+  testMatch: ['**/__tests__/**/*.test.{ts,tsx}'],
   setupFilesAfterEnv: ['./jest.setup.ts'],
   transform: {
     '^.+\\.tsx?$': [

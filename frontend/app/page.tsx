@@ -32,6 +32,7 @@ export default function HomePage() {
     setSelectedBuilding(null);
     setFinancials(null);
     setAllBuildingDetails([]);
+    setSearchQuery('');
     setIsAnalyzing(true);
 
     // Store preview URL for the overlay
@@ -88,24 +89,34 @@ export default function HomePage() {
     setFinancialError(null);
     setIsLoadingFinancials(true);
 
+    // Start both requests in parallel
+    const financialsPromise = fetch(`${apiUrl}/api/buildings/${building.buildingId}/financials`);
+    const detailsPromise = fetch(`${apiUrl}/api/buildings/${building.buildingId}`);
+
     try {
-      const [financialsRes, detailsRes] = await Promise.all([
-        fetch(`${apiUrl}/api/buildings/${building.buildingId}/financials`),
-        fetch(`${apiUrl}/api/buildings/${building.buildingId}`),
-      ]);
+      // Await financials first so the primary panel can render ASAP
+      const financialsRes = await financialsPromise;
 
       if (latestFetchRef.current !== fetchId) return;
 
       if (!financialsRes.ok) throw new Error('Failed to load financial data');
       const financialsData = await financialsRes.json();
 
-      if (detailsRes.ok) {
-        const detailsData = await detailsRes.json();
-        setBuildingDetails(detailsData);
-      }
-
       if (latestFetchRef.current !== fetchId) return;
       setFinancials(financialsData);
+      setIsLoadingFinancials(false);
+
+      // Handle details separately so slowness doesn't block financials
+      try {
+        const detailsRes = await detailsPromise;
+        if (latestFetchRef.current !== fetchId) return;
+        if (detailsRes.ok) {
+          const detailsData = await detailsRes.json();
+          setBuildingDetails(detailsData);
+        }
+      } catch {
+        // Ignore details fetch errors; financials are already shown
+      }
     } catch (err) {
       if (latestFetchRef.current !== fetchId) return;
       setFinancialError(err instanceof Error ? err.message : 'Failed to load financial data');
