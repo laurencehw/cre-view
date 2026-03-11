@@ -8,7 +8,7 @@ import { MOCK_BUILDINGS } from '../data/mockData';
 export const analyzeRouter = Router();
 
 // ─── Multer (file upload) config ─────────────────────────────────────────────
-const MAX_FILE_SIZE = (parseInt(process.env.MAX_FILE_SIZE_MB ?? '10') || 10) * 1024 * 1024;
+const MAX_FILE_SIZE = (parseInt(process.env.MAX_FILE_SIZE_MB ?? '') || 10) * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const storage = multer.diskStorage({

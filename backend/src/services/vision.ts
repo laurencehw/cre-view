@@ -47,7 +47,7 @@ class AzureVisionProvider implements VisionProvider {
     //   new ApiKeyCredentials({ inHeader: { 'Ocp-Apim-Subscription-Key': this.apiKey } }),
     //   this.endpoint,
     // );
-    throw new Error(`AzureVisionProvider not yet implemented (endpoint: ${this.endpoint})`);
+    throw new Error('AzureVisionProvider not yet implemented');
   }
 }
 

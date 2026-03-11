@@ -20,8 +20,8 @@ buildingsRouter.get(
         return;
       }
 
-      const page = (req.query.page as unknown as number) ?? 1;
-      const limit = (req.query.limit as unknown as number) ?? 20;
+      const page = Number(req.query.page ?? 1);
+      const limit = Number(req.query.limit ?? 20);
       const search = (req.query.search as string | undefined)?.toLowerCase();
 
       let filtered = MOCK_BUILDINGS;
