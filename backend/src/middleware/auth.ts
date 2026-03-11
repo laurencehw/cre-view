@@ -64,7 +64,8 @@ export function verifyToken(token: string): TokenPayload {
 
   const actualSig = base64urlDecode(sig);
 
-  if (!crypto.timingSafeEqual(expectedSig, actualSig)) {
+  // timingSafeEqual throws if buffers differ in length, so guard against that
+  if (expectedSig.length !== actualSig.length || !crypto.timingSafeEqual(expectedSig, actualSig)) {
     throw new Error('Invalid signature');
   }
 

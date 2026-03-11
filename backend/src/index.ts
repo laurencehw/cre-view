@@ -5,6 +5,7 @@ import path from 'path';
 import { analyzeRouter } from './routes/analyze';
 import { buildingsRouter } from './routes/buildings';
 import { healthRouter } from './routes/health';
+import { rateLimit } from './middleware/rateLimit';
 
 dotenv.config();
 
@@ -15,6 +16,12 @@ const PORT = process.env.PORT ?? 4000;
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Rate limiting — 100 requests per minute per IP (configurable via env)
+app.use('/api', rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '') || 60_000,
+  max: parseInt(process.env.RATE_LIMIT_MAX ?? '') || 100,
+}));
 
 // Serve uploaded files (dev only — use object storage in production)
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));

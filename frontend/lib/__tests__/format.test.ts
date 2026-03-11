@@ -29,6 +29,22 @@ describe('formatCurrency', () => {
     it('formats exact million boundary', () => {
       expect(formatCurrency(1_000_000, true)).toBe('$1.0M');
     });
+
+    it('formats negative billions', () => {
+      expect(formatCurrency(-2_100_000_000, true)).toBe('-$2.1B');
+    });
+
+    it('formats negative millions', () => {
+      expect(formatCurrency(-50_000_000, true)).toBe('-$50.0M');
+    });
+
+    it('formats negative thousands', () => {
+      expect(formatCurrency(-5_000, true)).toBe('-$5K');
+    });
+
+    it('formats negative small values', () => {
+      expect(formatCurrency(-500, true)).toBe('-$500');
+    });
   });
 
   describe('full mode', () => {
