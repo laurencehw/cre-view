@@ -17,6 +17,9 @@ app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Enable trust proxy so req.ip reflects the real client IP behind a reverse proxy
+app.set('trust proxy', 1);
+
 // Rate limiting — 100 requests per minute per IP (configurable via env)
 app.use('/api', rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '') || 60_000,

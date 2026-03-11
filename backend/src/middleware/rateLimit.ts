@@ -9,9 +9,10 @@ interface RateLimitEntry {
  * Simple in-memory rate limiter.
  * For production, swap this with a Redis-backed solution (e.g. ioredis + sliding window).
  */
-export function rateLimit(opts: { windowMs?: number; max?: number } = {}) {
+export function rateLimit(opts: { windowMs?: number; max?: number; maxStoreSize?: number } = {}) {
   const windowMs = opts.windowMs ?? 60_000; // 1 minute default
   const max = opts.max ?? 100;              // 100 requests per window
+  const maxStoreSize = opts.maxStoreSize ?? 10_000; // Cap entries to prevent memory exhaustion
   const store = new Map<string, RateLimitEntry>();
 
   // Periodically prune expired entries to prevent unbounded memory growth
@@ -29,6 +30,11 @@ export function rateLimit(opts: { windowMs?: number; max?: number } = {}) {
 
     let entry = store.get(key);
     if (!entry || now >= entry.resetAt) {
+      // If store is at capacity and this is a new key, reject to prevent memory exhaustion
+      if (!store.has(key) && store.size >= maxStoreSize) {
+        res.status(503).json({ error: 'Service temporarily unavailable', code: 'OVERLOADED' });
+        return;
+      }
       entry = { count: 0, resetAt: now + windowMs };
       store.set(key, entry);
     }

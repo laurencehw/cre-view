@@ -142,7 +142,7 @@ export default function HomePage() {
     [detectedBuildings, searchQuery],
   );
 
-  // Keyboard navigation: arrow keys to move, Enter to select, Escape to deselect
+  // Keyboard navigation: ArrowUp/ArrowDown or j/k to move & select, Escape to deselect
   const buildingListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -237,7 +237,7 @@ export default function HomePage() {
                   className="w-full mb-3 px-3 py-2 text-sm rounded-lg border border-gray-700 bg-gray-900/50 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-brand-500"
                 />
               )}
-              <div ref={buildingListRef} className="flex flex-col gap-3" role="listbox" aria-label="Detected buildings">
+              <div ref={buildingListRef} className="flex flex-col gap-3" aria-label="Detected buildings">
                 {filteredBuildings.map((b) => (
                   <BuildingCard
                     key={b.buildingId}
