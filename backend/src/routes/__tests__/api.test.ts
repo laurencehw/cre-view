@@ -11,12 +11,22 @@ describe('GET /api/health', () => {
 });
 
 describe('GET /api/buildings', () => {
-  it('returns paginated list of buildings', async () => {
+  it('returns paginated list of buildings with totalPages', async () => {
     const res = await request(app).get('/api/buildings');
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.data.length).toBeGreaterThan(0);
     expect(typeof res.body.total).toBe('number');
+    expect(typeof res.body.totalPages).toBe('number');
+    expect(res.body.totalPages).toBe(Math.ceil(res.body.total / res.body.limit));
+  });
+
+  it('respects custom page and limit params', async () => {
+    const res = await request(app).get('/api/buildings?page=1&limit=2');
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBeLessThanOrEqual(2);
+    expect(res.body.limit).toBe(2);
+    expect(res.body.page).toBe(1);
   });
 
   it('filters by search query', async () => {

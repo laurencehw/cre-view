@@ -37,7 +37,7 @@ buildingsRouter.get(
       const start = (page - 1) * limit;
       const data = filtered.slice(start, start + limit);
 
-      res.json({ data, page, limit, total });
+      res.json({ data, page, limit, total, totalPages: Math.ceil(total / limit) });
     } catch (err) {
       next(err);
     }

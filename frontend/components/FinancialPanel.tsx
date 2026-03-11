@@ -1,11 +1,12 @@
 'use client';
 
-import type { DetectedBuilding, BuildingFinancials } from '@/lib/types';
+import type { DetectedBuilding, Building, BuildingFinancials } from '@/lib/types';
 import { formatCurrency, formatPercent } from '@/lib/format';
 
 interface FinancialPanelProps {
   building: DetectedBuilding;
   financials: BuildingFinancials;
+  details?: Building | null;
 }
 
 function StatCard({ label, value }: { label: string; value: string }) {
@@ -17,24 +18,46 @@ function StatCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function FinancialPanel({ building, financials }: FinancialPanelProps) {
+export default function FinancialPanel({ building, financials, details }: FinancialPanelProps) {
   const { valuation, debt, equity } = financials;
   const ltv = valuation.estimatedValue > 0 ? debt.totalDebt / valuation.estimatedValue : 0;
+
+  // Weighted average interest rate across all debt tranches
+  const debtTranches = [debt.seniorLoan, ...(debt.mezz ? [debt.mezz] : [])];
+  const weightedAvgRate =
+    debt.totalDebt > 0
+      ? debtTranches.reduce((sum, t) => sum + t.amount * t.interestRate, 0) / debt.totalDebt
+      : 0;
+
+  // Debt Service Coverage Ratio: NOI / annual debt service (simplified as interest-only)
+  const annualDebtService = debtTranches.reduce((sum, t) => sum + t.amount * t.interestRate, 0);
+  const dscr = annualDebtService > 0 ? valuation.noi / annualDebtService : 0;
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
       {/* Title */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold">{building.name}</h2>
-        <p className="text-sm text-gray-400 mt-1">As of {financials.asOfDate}</p>
+        {details && (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-gray-400">
+            <span>{details.address}</span>
+            <span>{details.floors} floors</span>
+            <span>{details.heightFt.toLocaleString()} ft</span>
+            <span>{details.primaryUse}</span>
+            <span>Built {details.completionYear}</span>
+          </div>
+        )}
+        <p className="text-sm text-gray-500 mt-1">As of {financials.asOfDate}</p>
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
         <StatCard label="Valuation" value={formatCurrency(valuation.estimatedValue, true)} />
         <StatCard label="Cap Rate" value={formatPercent(valuation.capRate)} />
         <StatCard label="NOI" value={formatCurrency(valuation.noi, true)} />
         <StatCard label="LTV" value={formatPercent(ltv)} />
+        <StatCard label="DSCR" value={dscr > 0 ? `${dscr.toFixed(2)}x` : 'N/A'} />
+        <StatCard label="Wtd Avg Rate" value={formatPercent(weightedAvgRate)} />
       </div>
 
       {/* Debt */}

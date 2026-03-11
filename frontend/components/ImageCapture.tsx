@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 
 interface ImageCaptureProps {
   onImageSelected: (file: File) => void;
@@ -12,12 +12,20 @@ export default function ImageCapture({ onImageSelected, isLoading = false }: Ima
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
-  const handleFile = (file: File | undefined) => {
+  // Revoke previous object URL to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
+
+  const handleFile = useCallback((file: File | undefined) => {
     if (!file) return;
+    if (preview) URL.revokeObjectURL(preview);
     const url = URL.createObjectURL(file);
     setPreview(url);
     onImageSelected(file);
-  };
+  }, [preview, onImageSelected]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleFile(e.target.files?.[0]);
