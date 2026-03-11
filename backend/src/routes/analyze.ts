@@ -85,7 +85,7 @@ analyzeRouter.post(
       const visionResult = await visionService.analyze(imageBuffer, req.file.mimetype);
 
       // Clean up uploaded file after analysis
-      fs.promises.unlink(req.file.path).catch(() => {});
+      fs.promises.unlink(req.file.path).catch((err) => console.warn(`Failed to delete uploaded file ${req.file?.path}:`, err));
 
       // Cross-reference detected landmarks against known buildings
       const detectedBuildings = visionResult.landmarks

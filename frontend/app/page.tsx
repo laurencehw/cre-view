@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import ImageCapture from '@/components/ImageCapture';
 import BuildingCard from '@/components/BuildingCard';
 import FinancialPanel from '@/components/FinancialPanel';
@@ -20,6 +20,13 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [allBuildingDetails, setAllBuildingDetails] = useState<Building[]>([]);
+
+  // Clean up object URL on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    };
+  }, [imagePreviewUrl]);
 
   // Track the latest financial fetch to prevent race conditions
   const latestFetchRef = useRef<string | null>(null);
@@ -104,7 +111,6 @@ export default function HomePage() {
 
       if (latestFetchRef.current !== fetchId) return;
       setFinancials(financialsData);
-      setIsLoadingFinancials(false);
 
       // Handle details separately so slowness doesn't block financials
       try {
