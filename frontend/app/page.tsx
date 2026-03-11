@@ -12,6 +12,8 @@ export default function HomePage() {
   const [selectedBuilding, setSelectedBuilding] = useState<DetectedBuilding | null>(null);
   const [financials, setFinancials] = useState<BuildingFinancials | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoadingFinancials, setIsLoadingFinancials] = useState(false);
+  const [financialError, setFinancialError] = useState<string | null>(null);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -32,8 +34,15 @@ export default function HomePage() {
       });
 
       if (!res.ok) {
-        const body = await res.json();
-        throw new Error(body.error ?? 'Analysis failed');
+        let errorMessage = 'Analysis failed';
+        try {
+          const body = await res.json();
+          errorMessage = body.error ?? errorMessage;
+        } catch {
+          const text = await res.text().catch(() => '');
+          errorMessage = text || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await res.json();
@@ -48,6 +57,8 @@ export default function HomePage() {
   const handleBuildingSelect = async (building: DetectedBuilding) => {
     setSelectedBuilding(building);
     setFinancials(null);
+    setFinancialError(null);
+    setIsLoadingFinancials(true);
 
     try {
       const res = await fetch(`${apiUrl}/api/buildings/${building.buildingId}/financials`);
@@ -55,7 +66,9 @@ export default function HomePage() {
       const data = await res.json();
       setFinancials(data);
     } catch (err) {
-      console.error('Financial data error:', err);
+      setFinancialError(err instanceof Error ? err.message : 'Failed to load financial data');
+    } finally {
+      setIsLoadingFinancials(false);
     }
   };
 
@@ -116,7 +129,13 @@ export default function HomePage() {
         <section className="flex-1 overflow-auto">
           {selectedBuilding && financials ? (
             <FinancialPanel building={selectedBuilding} financials={financials} />
-          ) : selectedBuilding ? (
+          ) : selectedBuilding && financialError ? (
+            <div className="flex items-center justify-center h-full p-8">
+              <div className="rounded-lg bg-red-900/30 border border-red-800 p-4 text-sm text-red-300 max-w-sm text-center">
+                {financialError}
+              </div>
+            </div>
+          ) : selectedBuilding && isLoadingFinancials ? (
             <div className="flex items-center justify-center h-full text-gray-500">
               Loading financial data…
             </div>

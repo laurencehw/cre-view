@@ -13,9 +13,6 @@ jobs:
   lint-and-test-frontend:
     name: Frontend — Lint & Test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
 
@@ -24,29 +21,26 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint --workspace=frontend
 
       - name: Type check
-        run: npm run type-check
+        run: npm run type-check --workspace=frontend
 
       - name: Run tests
-        run: npm test -- --passWithNoTests
+        run: npm test --workspace=frontend
 
       - name: Build
-        run: npm run build
+        run: npm run build --workspace=frontend
 
   lint-and-test-backend:
     name: Backend — Lint & Test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
     steps:
       - uses: actions/checkout@v4
 
@@ -55,19 +49,19 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint --workspace=backend
 
       - name: Type check
-        run: npm run type-check
+        run: npm run type-check --workspace=backend
 
       - name: Run tests
-        run: npm test
+        run: npm test --workspace=backend
 
       - name: Build
-        run: npm run build
+        run: npm run build --workspace=backend
