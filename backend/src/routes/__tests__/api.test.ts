@@ -68,6 +68,26 @@ describe('GET /api/buildings/:id/financials', () => {
   });
 });
 
+describe('GET /api/buildings/:id/financials/export', () => {
+  it('returns CSV with correct headers and content', async () => {
+    const res = await request(app).get('/api/buildings/bld_001/financials/export');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/text\/csv/);
+    expect(res.headers['content-disposition']).toMatch(/attachment/);
+    expect(res.headers['content-disposition']).toMatch(/\.csv/);
+    // Verify header row
+    const lines = res.text.split('\n');
+    expect(lines[0]).toBe('"Section","Field","Value"');
+    // Verify building data is present
+    expect(res.text).toContain('Empire State Building');
+  });
+
+  it('returns 404 for unknown building', async () => {
+    const res = await request(app).get('/api/buildings/bld_unknown/financials/export');
+    expect(res.status).toBe(404);
+  });
+});
+
 describe('GET /api/404', () => {
   it('returns 404 for unknown routes', async () => {
     const res = await request(app).get('/api/nonexistent');

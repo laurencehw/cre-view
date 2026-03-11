@@ -18,6 +18,27 @@ function StatCard({ label, value }: { label: string; value: string }) {
   );
 }
 
+function ExportButton({ buildingId, buildingName }: { buildingId: string; buildingName: string }) {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+  const handleExport = () => {
+    const link = document.createElement('a');
+    link.href = `${apiUrl}/api/buildings/${buildingId}/financials/export`;
+    link.download = `${buildingName.replace(/[^a-zA-Z0-9]/g, '_')}_financials.csv`;
+    link.click();
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleExport}
+      className="text-xs px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+    >
+      Export CSV
+    </button>
+  );
+}
+
 export default function FinancialPanel({ building, financials, details }: FinancialPanelProps) {
   const { valuation, debt, equity } = financials;
   const ltv = valuation.estimatedValue > 0 ? debt.totalDebt / valuation.estimatedValue : 0;
@@ -34,7 +55,10 @@ export default function FinancialPanel({ building, financials, details }: Financ
     <div className="p-6 max-w-3xl mx-auto">
       {/* Title */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold">{building.name}</h2>
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-2xl font-bold">{building.name}</h2>
+          <ExportButton buildingId={building.buildingId} buildingName={building.name} />
+        </div>
         {details && (
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-gray-400">
             <span>{details.address}</span>

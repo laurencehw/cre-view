@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import ImageCapture from '@/components/ImageCapture';
 import BuildingCard from '@/components/BuildingCard';
 import FinancialPanel from '@/components/FinancialPanel';
@@ -133,6 +133,48 @@ export default function HomePage() {
     }
   }, [apiUrl]);
 
+  // Filtered building list (used by both render and keyboard nav)
+  const filteredBuildings = useMemo(
+    () =>
+      detectedBuildings.filter(
+        (b) => !searchQuery || b.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
+    [detectedBuildings, searchQuery],
+  );
+
+  // Keyboard navigation: ArrowUp/ArrowDown or j/k to move & select, Escape to deselect
+  const buildingListRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (filteredBuildings.length === 0) return;
+      // Don't intercept when user is typing in the search input
+      if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
+
+      const currentIdx = selectedBuilding
+        ? filteredBuildings.findIndex((b) => b.buildingId === selectedBuilding.buildingId)
+        : -1;
+
+      if (e.key === 'ArrowDown' || e.key === 'j') {
+        e.preventDefault();
+        const next = Math.min(currentIdx + 1, filteredBuildings.length - 1);
+        handleBuildingSelect(filteredBuildings[next]);
+      } else if (e.key === 'ArrowUp' || e.key === 'k') {
+        e.preventDefault();
+        const prev = Math.max(currentIdx - 1, 0);
+        handleBuildingSelect(filteredBuildings[prev]);
+      } else if (e.key === 'Escape') {
+        setSelectedBuilding(null);
+        setFinancials(null);
+        setBuildingDetails(null);
+        setFinancialError(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [filteredBuildings, selectedBuilding, handleBuildingSelect]);
+
   return (
     <main className="flex flex-col min-h-screen">
       {/* Header */}
@@ -195,20 +237,21 @@ export default function HomePage() {
                   className="w-full mb-3 px-3 py-2 text-sm rounded-lg border border-gray-700 bg-gray-900/50 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-brand-500"
                 />
               )}
-              <div className="flex flex-col gap-3">
-                {detectedBuildings
-                  .filter((b) =>
-                    !searchQuery || b.name.toLowerCase().includes(searchQuery.toLowerCase()),
-                  )
-                  .map((b) => (
-                    <BuildingCard
-                      key={b.buildingId}
-                      building={b}
-                      isSelected={selectedBuilding?.buildingId === b.buildingId}
-                      onClick={() => handleBuildingSelect(b)}
-                    />
-                  ))}
+              <div ref={buildingListRef} className="flex flex-col gap-3" aria-label="Detected buildings">
+                {filteredBuildings.map((b) => (
+                  <BuildingCard
+                    key={b.buildingId}
+                    building={b}
+                    isSelected={selectedBuilding?.buildingId === b.buildingId}
+                    onClick={() => handleBuildingSelect(b)}
+                  />
+                ))}
               </div>
+              {filteredBuildings.length > 0 && (
+                <p className="text-xs text-gray-600 mt-2">
+                  Use arrow keys to navigate, Escape to deselect
+                </p>
+              )}
             </div>
           )}
         </section>
