@@ -1,19 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import ImageCapture from '@/components/ImageCapture';
 import BuildingCard from '@/components/BuildingCard';
 import FinancialPanel from '@/components/FinancialPanel';
-import type { DetectedBuilding, BuildingFinancials } from '@/lib/types';
+import type { DetectedBuilding, Building, BuildingFinancials } from '@/lib/types';
 
 export default function HomePage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [detectedBuildings, setDetectedBuildings] = useState<DetectedBuilding[]>([]);
   const [selectedBuilding, setSelectedBuilding] = useState<DetectedBuilding | null>(null);
+  const [buildingDetails, setBuildingDetails] = useState<Building | null>(null);
   const [financials, setFinancials] = useState<BuildingFinancials | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoadingFinancials, setIsLoadingFinancials] = useState(false);
   const [financialError, setFinancialError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Track the latest financial fetch to prevent race conditions
+  const latestFetchRef = useRef<string | null>(null);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -54,23 +59,43 @@ export default function HomePage() {
     }
   };
 
-  const handleBuildingSelect = async (building: DetectedBuilding) => {
+  const handleBuildingSelect = useCallback(async (building: DetectedBuilding) => {
+    const fetchId = building.buildingId;
+    latestFetchRef.current = fetchId;
+
     setSelectedBuilding(building);
+    setBuildingDetails(null);
     setFinancials(null);
     setFinancialError(null);
     setIsLoadingFinancials(true);
 
     try {
-      const res = await fetch(`${apiUrl}/api/buildings/${building.buildingId}/financials`);
-      if (!res.ok) throw new Error('Failed to load financial data');
-      const data = await res.json();
-      setFinancials(data);
+      const [financialsRes, detailsRes] = await Promise.all([
+        fetch(`${apiUrl}/api/buildings/${building.buildingId}/financials`),
+        fetch(`${apiUrl}/api/buildings/${building.buildingId}`),
+      ]);
+
+      if (latestFetchRef.current !== fetchId) return;
+
+      if (!financialsRes.ok) throw new Error('Failed to load financial data');
+      const financialsData = await financialsRes.json();
+
+      if (detailsRes.ok) {
+        const detailsData = await detailsRes.json();
+        setBuildingDetails(detailsData);
+      }
+
+      if (latestFetchRef.current !== fetchId) return;
+      setFinancials(financialsData);
     } catch (err) {
+      if (latestFetchRef.current !== fetchId) return;
       setFinancialError(err instanceof Error ? err.message : 'Failed to load financial data');
     } finally {
-      setIsLoadingFinancials(false);
+      if (latestFetchRef.current === fetchId) {
+        setIsLoadingFinancials(false);
+      }
     }
-  };
+  }, [apiUrl]);
 
   return (
     <main className="flex flex-col min-h-screen">
@@ -111,15 +136,28 @@ export default function HomePage() {
               <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
                 Detected Buildings ({detectedBuildings.length})
               </h2>
+              {detectedBuildings.length > 3 && (
+                <input
+                  type="text"
+                  placeholder="Filter buildings…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full mb-3 px-3 py-2 text-sm rounded-lg border border-gray-700 bg-gray-900/50 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                />
+              )}
               <div className="flex flex-col gap-3">
-                {detectedBuildings.map((b) => (
-                  <BuildingCard
-                    key={b.buildingId}
-                    building={b}
-                    isSelected={selectedBuilding?.buildingId === b.buildingId}
-                    onClick={() => handleBuildingSelect(b)}
-                  />
-                ))}
+                {detectedBuildings
+                  .filter((b) =>
+                    !searchQuery || b.name.toLowerCase().includes(searchQuery.toLowerCase()),
+                  )
+                  .map((b) => (
+                    <BuildingCard
+                      key={b.buildingId}
+                      building={b}
+                      isSelected={selectedBuilding?.buildingId === b.buildingId}
+                      onClick={() => handleBuildingSelect(b)}
+                    />
+                  ))}
               </div>
             </div>
           )}
@@ -128,7 +166,7 @@ export default function HomePage() {
         {/* Right panel — financial detail */}
         <section className="flex-1 overflow-auto">
           {selectedBuilding && financials ? (
-            <FinancialPanel building={selectedBuilding} financials={financials} />
+            <FinancialPanel building={selectedBuilding} financials={financials} details={buildingDetails} />
           ) : selectedBuilding && financialError ? (
             <div className="flex items-center justify-center h-full p-8">
               <div className="rounded-lg bg-red-900/30 border border-red-800 p-4 text-sm text-red-300 max-w-sm text-center">
