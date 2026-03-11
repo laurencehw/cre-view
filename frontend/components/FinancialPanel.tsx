@@ -56,7 +56,7 @@ export default function FinancialPanel({ building, financials, details }: Financ
         <StatCard label="Cap Rate" value={formatPercent(valuation.capRate)} />
         <StatCard label="NOI" value={formatCurrency(valuation.noi, true)} />
         <StatCard label="LTV" value={formatPercent(ltv)} />
-        <StatCard label="DSCR" value={dscr > 0 ? `${dscr.toFixed(2)}x` : 'N/A'} />
+        <StatCard label="DSCR" value={annualDebtService > 0 ? `${dscr.toFixed(2)}x` : 'N/A'} />
         <StatCard label="Wtd Avg Rate" value={formatPercent(weightedAvgRate)} />
       </div>
 

@@ -15,7 +15,12 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
 
 // Ensure uploads directory exists
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+try {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+} catch (err) {
+  console.error(`Failed to create uploads directory at "${UPLOAD_DIR}":`, err);
+  throw new Error('Server initialization failed: unable to create uploads directory');
+}
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -76,12 +81,15 @@ analyzeRouter.post(
 
       // Run the image through the configured vision service
       const visionService = createVisionService();
-      const imageBuffer = fs.readFileSync(req.file.path);
+      const imageBuffer = await fs.promises.readFile(req.file.path);
       const visionResult = await visionService.analyze(imageBuffer, req.file.mimetype);
+
+      // Clean up uploaded file after analysis
+      fs.promises.unlink(req.file.path).catch(() => {});
 
       // Cross-reference detected landmarks against known buildings
       const detectedBuildings = visionResult.landmarks
-        .map((landmark) => {
+        .map((landmark, idx) => {
           const match = MOCK_BUILDINGS.find(
             (b) => b.name.toLowerCase() === landmark.name.toLowerCase(),
           );
@@ -91,7 +99,7 @@ analyzeRouter.post(
                 name: match.name,
                 confidence: landmark.confidence,
                 boundingBox: landmark.boundingBox ?? {
-                  x: 80 + Math.floor(Math.random() * 200),
+                  x: 80 + idx * 120,
                   y: 40,
                   width: 70,
                   height: 250,

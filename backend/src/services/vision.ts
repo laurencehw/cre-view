@@ -60,19 +60,30 @@ class GcpVisionProvider implements VisionProvider {
 }
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
+export class VisionProviderNotConfiguredError extends Error {
+  constructor(provider: string) {
+    super(`Vision provider "${provider}" is not yet implemented. Set VISION_PROVIDER=mock or implement the provider.`);
+    this.name = 'VisionProviderNotConfiguredError';
+  }
+}
+
 export function createVisionService(): VisionProvider {
   const provider = process.env.VISION_PROVIDER ?? 'mock';
 
   switch (provider) {
-    case 'azure':
-      return new AzureVisionProvider(
-        process.env.AZURE_VISION_ENDPOINT ?? '',
-        process.env.AZURE_VISION_KEY ?? '',
-      );
+    case 'azure': {
+      const endpoint = process.env.AZURE_VISION_ENDPOINT;
+      const key = process.env.AZURE_VISION_KEY;
+      if (!endpoint || !key) {
+        throw new VisionProviderNotConfiguredError('azure (missing AZURE_VISION_ENDPOINT or AZURE_VISION_KEY)');
+      }
+      return new AzureVisionProvider(endpoint, key);
+    }
     case 'gcp':
       return new GcpVisionProvider();
     case 'mock':
-    default:
       return new MockVisionProvider();
+    default:
+      throw new VisionProviderNotConfiguredError(provider);
   }
 }
