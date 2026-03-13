@@ -53,3 +53,6 @@ playwright-report/
 
 # Uploads (local dev)
 /backend/uploads/
+
+# Mock data persistence (dev only)
+.mock-users.json

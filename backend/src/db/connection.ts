@@ -6,6 +6,8 @@
 //
 // Then set DATABASE_URL in your .env file.
 
+import fs from 'fs';
+import path from 'path';
 import logger from '../services/logger';
 
 export interface DbClient {
@@ -25,8 +27,33 @@ interface MockUser {
   role: string;
 }
 
+// Persist mock users to a JSON file so registrations survive restarts in dev.
+// In test environment, skip persistence to keep tests isolated.
+const USERS_FILE = path.join(__dirname, '..', '..', '.mock-users.json');
+const isTestEnv = process.env.NODE_ENV === 'test';
+
+function loadPersistedUsers(): MockUser[] {
+  if (isTestEnv) return [];
+  try {
+    const data = fs.readFileSync(USERS_FILE, 'utf-8');
+    return JSON.parse(data);
+  } catch {
+    return [];
+  }
+}
+
+function persistUsers(users: MockUser[]): void {
+  if (isTestEnv) return;
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+  } catch {
+    // Non-critical — log but don't crash
+    logger.warn('Failed to persist mock users to %s', USERS_FILE);
+  }
+}
+
 class MockDbClient implements DbClient {
-  private users: MockUser[] = [];
+  private users: MockUser[] = loadPersistedUsers();
 
   async query<T = Record<string, unknown>>(text: string, values?: unknown[]): Promise<{ rows: T[] }> {
     // Simple query pattern matching for the repository layer
@@ -56,6 +83,7 @@ class MockDbClient implements DbClient {
     if (text.includes('INSERT INTO users')) {
       const [id, email, password_hash, salt, role] = values as string[];
       this.users.push({ id, email, password_hash, salt, role });
+      persistUsers(this.users);
       return { rows: [] };
     }
 

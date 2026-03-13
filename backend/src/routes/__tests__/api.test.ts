@@ -229,6 +229,44 @@ describe('POST /api/auth/login', () => {
   });
 });
 
+describe('POST /api/auth/refresh', () => {
+  it('returns a valid token', async () => {
+    const res = await request(app)
+      .post('/api/auth/refresh')
+      .set('Authorization', `Bearer ${authToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeDefined();
+    // Verify the refreshed token is a valid JWT (3 dot-separated parts)
+    expect(res.body.token.split('.').length).toBe(3);
+  });
+
+  it('returns 401 without auth token', async () => {
+    const res = await request(app).post('/api/auth/refresh');
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('UNAUTHORIZED');
+  });
+});
+
+describe('Cache-Control headers', () => {
+  it('sets cache headers on building list', async () => {
+    const res = await request(app).get('/api/buildings');
+    expect(res.headers['cache-control']).toMatch(/max-age=300/);
+  });
+
+  it('sets cache headers on building details', async () => {
+    const res = await request(app).get('/api/buildings/bld_001');
+    expect(res.headers['cache-control']).toMatch(/max-age=600/);
+  });
+
+  it('sets private cache headers on financials', async () => {
+    const res = await request(app)
+      .get('/api/buildings/bld_001/financials')
+      .set('Authorization', `Bearer ${authToken}`);
+    expect(res.headers['cache-control']).toMatch(/private/);
+    expect(res.headers['cache-control']).toMatch(/max-age=300/);
+  });
+});
+
 describe('GET /api/404', () => {
   it('returns 404 for unknown routes', async () => {
     const res = await request(app).get('/api/nonexistent');

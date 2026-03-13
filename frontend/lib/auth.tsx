@@ -1,10 +1,10 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 
 interface AuthState {
   token: string | null;
-  user: { sub: string; email?: string; role?: string } | null;
+  user: { sub: string; email?: string; role?: string; exp?: number } | null;
 }
 
 interface AuthContextValue extends AuthState {
@@ -89,6 +89,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!authState.token) return {};
     return { Authorization: `Bearer ${authState.token}` };
   }, [authState.token]);
+
+  // Auto-refresh: schedule a refresh 5 minutes before the token expires
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+
+    if (!authState.token || !authState.user?.exp) return;
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const refreshAt = authState.user.exp - 300; // 5 minutes before expiry
+    const delayMs = Math.max((refreshAt - nowSec) * 1000, 0);
+
+    refreshTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`${apiUrl}/api/auth/refresh`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${authState.token}` },
+        });
+        if (!res.ok) throw new Error('Refresh failed');
+        const { token } = await res.json();
+        const user = parseJwtPayload(token);
+        if (user) {
+          localStorage.setItem(STORAGE_KEY, token);
+          setAuthState({ token, user });
+        }
+      } catch {
+        // Refresh failed — user will be logged out when token naturally expires
+      }
+    }, delayMs);
+
+    return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    };
+  }, [authState.token, authState.user?.exp, apiUrl]);
 
   return (
     <AuthContext.Provider

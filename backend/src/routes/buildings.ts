@@ -28,6 +28,8 @@ buildingsRouter.get(
         search: req.query.search as string | undefined,
       });
 
+      // Building list changes infrequently — cache for 5 minutes
+      res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
       res.json(result);
     } catch (err) {
       next(err);
@@ -54,6 +56,8 @@ buildingsRouter.get(
         return;
       }
 
+      // Individual building details are stable — cache for 10 minutes
+      res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=60');
       res.json(building);
     } catch (err) {
       next(err);
@@ -86,6 +90,8 @@ buildingsRouter.get(
         return;
       }
 
+      // Financial data is per-user (requires auth) — private cache for 5 minutes
+      res.setHeader('Cache-Control', 'private, max-age=300, stale-while-revalidate=60');
       res.json(financials);
     } catch (err) {
       next(err);

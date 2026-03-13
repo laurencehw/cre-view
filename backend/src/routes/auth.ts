@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import crypto from 'crypto';
-import { signToken } from '../middleware/auth';
+import { signToken, requireAuth } from '../middleware/auth';
 import { getDb } from '../db/connection';
 import logger from '../services/logger';
 
@@ -101,5 +101,18 @@ authRouter.post(
     const token = signToken({ sub: user.id, email: user.email, role: user.role });
     logger.info({ userId: user.id }, 'User logged in');
     res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+  },
+);
+
+// ─── POST /api/auth/refresh ──────────────────────────────────────────────────
+// Issues a fresh token if the current one is still valid.
+// The frontend calls this proactively before the token expires.
+authRouter.post(
+  '/auth/refresh',
+  requireAuth,
+  (_req: Request, res: Response) => {
+    const user = _req.user!;
+    const token = signToken({ sub: user.sub, email: user.email, role: user.role });
+    res.json({ token });
   },
 );
