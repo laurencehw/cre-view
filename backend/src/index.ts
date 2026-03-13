@@ -23,7 +23,12 @@ app.use(cors({
   origin(origin, callback) {
     // Allow requests with no Origin (curl, server-to-server)
     if (!origin) return callback(null, true);
+    // Allow configured origins
     if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Allow any *.onrender.com subdomain (safe — each Render app has its own subdomain)
+    if (/^https:\/\/[a-z0-9-]+\.onrender\.com$/.test(origin)) return callback(null, true);
+    // Allow localhost for development
+    if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true);
     logger.warn({ origin, allowedOrigins }, 'CORS rejected origin');
     callback(new Error(`Origin ${origin} not allowed by CORS`));
   },
