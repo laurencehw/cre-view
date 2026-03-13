@@ -23,7 +23,12 @@ function parseJwtPayload(token: string): AuthState['user'] {
   try {
     const base64 = token.split('.')[1];
     const json = atob(base64.replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(json);
+    const payload = JSON.parse(json);
+    // Reject expired tokens so stale localStorage entries don't fake auth
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+      return null;
+    }
+    return payload;
   } catch {
     return null;
   }

@@ -31,7 +31,7 @@ async function migrate() {
 
   console.log('Starting database migration...');
 
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
   const { Pool } = require('pg');
   const pool = new Pool({ connectionString: databaseUrl });
 

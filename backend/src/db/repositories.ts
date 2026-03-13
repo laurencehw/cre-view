@@ -117,7 +117,7 @@ export async function listBuildings(opts: {
           b.address.toLowerCase().includes(search),
       );
       const total = filtered.length;
-      const data = filtered.slice(0, limit).map(mapBuildingRow);
+      const data = filtered.slice(offset, offset + limit).map(mapBuildingRow);
       return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
 
@@ -137,7 +137,7 @@ export async function listBuildings(opts: {
   const rows = dataResult.rows;
   if (rows.length > 0 && isMockResult(rows[0])) {
     const total = rows.length;
-    const data = rows.slice(0, limit).map(mapBuildingRow);
+    const data = rows.slice(offset, offset + limit).map(mapBuildingRow);
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
