@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { supabase, supabaseEnabled } from './supabase';
 
 interface AuthState {
   token: string | null;
@@ -9,10 +10,13 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   /** Returns headers object with Authorization if logged in */
   authHeaders: () => Record<string, string>;
+  /** Whether Supabase auth is active */
+  isSupabase: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -39,7 +43,91 @@ function parseJwtPayload(token: string): AuthState['user'] {
   }
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+// ─── Supabase Auth Provider ─────────────────────────────────────────────────
+
+function SupabaseAuthProvider({ children }: { children: React.ReactNode }) {
+  const [authState, setAuthState] = useState<AuthState>({ token: null, user: null });
+
+  // Listen for Supabase auth state changes (handles session restore, refresh, etc.)
+  useEffect(() => {
+    if (!supabase) return;
+
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setAuthState({
+          token: session.access_token,
+          user: {
+            sub: session.user.id,
+            email: session.user.email,
+            role: session.user.role ?? 'authenticated',
+          },
+        });
+      }
+    });
+
+    // Subscribe to auth changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setAuthState({
+          token: session.access_token,
+          user: {
+            sub: session.user.id,
+            email: session.user.email,
+            role: session.user.role ?? 'authenticated',
+          },
+        });
+      } else {
+        setAuthState({ token: null, user: null });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const login = useCallback(async (email: string, password: string) => {
+    if (!supabase) throw new Error('Supabase not configured');
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+  }, []);
+
+  const register = useCallback(async (email: string, password: string) => {
+    if (!supabase) throw new Error('Supabase not configured');
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) throw new Error(error.message);
+  }, []);
+
+  const logout = useCallback(async () => {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    setAuthState({ token: null, user: null });
+  }, []);
+
+  const authHeaders = useCallback((): Record<string, string> => {
+    if (!authState.token) return {};
+    return { Authorization: `Bearer ${authState.token}` };
+  }, [authState.token]);
+
+  return (
+    <AuthContext.Provider
+      value={{
+        ...authState,
+        login,
+        register,
+        logout,
+        isAuthenticated: !!authState.token,
+        authHeaders,
+        isSupabase: true,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// ─── Custom JWT Auth Provider (original) ────────────────────────────────────
+
+function CustomAuthProvider({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>({ token: null, user: null });
 
   // Hydrate from localStorage on mount
@@ -72,6 +160,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.error ?? 'Login failed');
+    }
+
+    const { token } = await res.json();
+    const user = parseJwtPayload(token);
+    localStorage.setItem(STORAGE_KEY, token);
+    setAuthState({ token, user });
+  }, [apiUrl]);
+
+  const register = useCallback(async (email: string, password: string) => {
+    let res: Response;
+    try {
+      res = await fetch(`${apiUrl}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+    } catch {
+      throw new Error(`Network error reaching API (${apiUrl}). Check CORS_ORIGIN on the server.`);
+    }
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error ?? 'Registration failed');
     }
 
     const { token } = await res.json();
@@ -133,14 +244,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         ...authState,
         login,
+        register,
         logout,
         isAuthenticated: !!authState.token,
         authHeaders,
+        isSupabase: false,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
+}
+
+// ─── Exports ────────────────────────────────────────────────────────────────
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  if (supabaseEnabled) {
+    return <SupabaseAuthProvider>{children}</SupabaseAuthProvider>;
+  }
+  return <CustomAuthProvider>{children}</CustomAuthProvider>;
 }
 
 export function useAuth() {

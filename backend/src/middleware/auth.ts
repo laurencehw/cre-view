@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import logger from '../services/logger';
+import { supabaseAdmin, supabaseEnabled } from '../services/supabase';
 
 // Lightweight JWT-like auth middleware.
-// Uses Node's built-in crypto so there's no external dependency to install.
-// When you're ready to move to a production JWT library (e.g. jose), swap out
-// the verify/sign functions below.
+// Supports two modes:
+//   1. Supabase Auth — verifies tokens via Supabase's getUser() API
+//   2. Custom JWT — uses Node's built-in crypto (fallback when Supabase is not configured)
 
 interface TokenPayload {
   sub: string;       // user id
@@ -14,6 +15,27 @@ interface TokenPayload {
   iat: number;       // issued-at (epoch seconds)
   exp: number;       // expiration (epoch seconds)
 }
+
+// ─── Supabase token verification ────────────────────────────────────────────
+
+async function verifySupabaseToken(token: string): Promise<TokenPayload> {
+  if (!supabaseAdmin) throw new Error('Supabase not configured');
+
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !user) {
+    throw new Error(error?.message ?? 'Invalid token');
+  }
+
+  return {
+    sub: user.id,
+    email: user.email,
+    role: user.role ?? 'authenticated',
+    iat: Math.floor(new Date(user.created_at).getTime() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 3600, // Supabase handles expiry; this is nominal
+  };
+}
+
+// ─── Custom JWT signing & verification ──────────────────────────────────────
 
 const ALG = 'HS256';
 
@@ -79,6 +101,15 @@ export function verifyToken(token: string): TokenPayload {
   return payload;
 }
 
+// ─── Unified verify function ────────────────────────────────────────────────
+
+async function verifyAnyToken(token: string): Promise<TokenPayload> {
+  if (supabaseEnabled) {
+    return verifySupabaseToken(token);
+  }
+  return verifyToken(token);
+}
+
 // Express request extension
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -91,9 +122,7 @@ declare global {
 
 /**
  * Middleware that requires a valid Bearer token.
- * Attach to any route that needs authentication:
- *
- *   router.get('/protected', requireAuth, handler);
+ * Automatically uses Supabase or custom JWT verification based on config.
  */
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
@@ -102,16 +131,19 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     return;
   }
 
-  try {
-    const token = authHeader.slice(7);
-    req.user = verifyToken(token);
-    next();
-  } catch (err) {
-    res.status(401).json({
-      error: err instanceof Error ? err.message : 'Invalid token',
-      code: 'UNAUTHORIZED',
+  const token = authHeader.slice(7);
+
+  verifyAnyToken(token)
+    .then((payload) => {
+      req.user = payload;
+      next();
+    })
+    .catch((err) => {
+      res.status(401).json({
+        error: err instanceof Error ? err.message : 'Invalid token',
+        code: 'UNAUTHORIZED',
+      });
     });
-  }
 }
 
 /**
@@ -119,12 +151,20 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
  */
 export function optionalAuth(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    try {
-      req.user = verifyToken(authHeader.slice(7));
-    } catch (err) {
-      logger.debug('optionalAuth: token verification failed: %s', err instanceof Error ? err.message : err);
-    }
+  if (!authHeader?.startsWith('Bearer ')) {
+    next();
+    return;
   }
-  next();
+
+  const token = authHeader.slice(7);
+
+  verifyAnyToken(token)
+    .then((payload) => {
+      req.user = payload;
+      next();
+    })
+    .catch((err) => {
+      logger.debug('optionalAuth: token verification failed: %s', err instanceof Error ? err.message : err);
+      next();
+    });
 }
