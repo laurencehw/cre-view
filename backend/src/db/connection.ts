@@ -17,7 +17,17 @@ export interface DbClient {
 
 import { MOCK_BUILDINGS, MOCK_FINANCIALS } from '../data/mockData';
 
+interface MockUser {
+  id: string;
+  email: string;
+  password_hash: string;
+  salt: string;
+  role: string;
+}
+
 class MockDbClient implements DbClient {
+  private users: MockUser[] = [];
+
   async query<T = Record<string, unknown>>(text: string, values?: unknown[]): Promise<{ rows: T[] }> {
     // Simple query pattern matching for the repository layer
     if (text.includes('FROM buildings') && text.includes('WHERE id')) {
@@ -34,6 +44,19 @@ class MockDbClient implements DbClient {
       const buildingId = values?.[0] as string;
       const financial = MOCK_FINANCIALS.find((f) => f.buildingId === buildingId);
       return { rows: (financial ? [financial] : []) as T[] };
+    }
+
+    // User queries for auth
+    if (text.includes('FROM users') && text.includes('WHERE email')) {
+      const email = values?.[0] as string;
+      const user = this.users.find((u) => u.email === email);
+      return { rows: (user ? [user] : []) as T[] };
+    }
+
+    if (text.includes('INSERT INTO users')) {
+      const [id, email, password_hash, salt, role] = values as string[];
+      this.users.push({ id, email, password_hash, salt, role });
+      return { rows: [] };
     }
 
     return { rows: [] };

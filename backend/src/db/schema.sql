@@ -67,6 +67,17 @@ CREATE TABLE IF NOT EXISTS cap_table_entries (
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ─── Users ───────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS users (
+    id               TEXT        PRIMARY KEY DEFAULT 'usr_' || substr(uuid_generate_v4()::text, 1, 8),
+    email            TEXT        NOT NULL UNIQUE,
+    password_hash    TEXT        NOT NULL,
+    salt             TEXT        NOT NULL,
+    role             TEXT        NOT NULL DEFAULT 'user',
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ─── Analyses ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS analyses (
     id               TEXT        PRIMARY KEY DEFAULT 'ana_' || substr(uuid_generate_v4()::text, 1, 8),
@@ -102,4 +113,8 @@ CREATE OR REPLACE TRIGGER buildings_updated_at
 
 CREATE OR REPLACE TRIGGER financials_updated_at
     BEFORE UPDATE ON financials
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE OR REPLACE TRIGGER users_updated_at
+    BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();

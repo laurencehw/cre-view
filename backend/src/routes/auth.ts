@@ -2,35 +2,22 @@ import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import crypto from 'crypto';
 import { signToken } from '../middleware/auth';
+import { getDb } from '../db/connection';
 import logger from '../services/logger';
 
 export const authRouter = Router();
-
-// In-memory user store for development.
-// In production, replace with database-backed user lookup + bcrypt.
-interface StoredUser {
-  id: string;
-  email: string;
-  passwordHash: string;
-  salt: string;
-  role: string;
-}
 
 function hashPassword(password: string, salt: string): string {
   return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
 }
 
-// Seed a default dev user on startup
-const DEV_SALT = crypto.randomBytes(16).toString('hex');
-const users: StoredUser[] = [
-  {
-    id: 'usr_dev',
-    email: 'dev@creview.local',
-    passwordHash: hashPassword('dev123', DEV_SALT),
-    salt: DEV_SALT,
-    role: 'admin',
-  },
-];
+interface UserRow {
+  id: string;
+  email: string;
+  password_hash: string;
+  salt: string;
+  role: string;
+}
 
 // ─── POST /api/auth/register ─────────────────────────────────────────────────
 authRouter.post(
@@ -39,7 +26,7 @@ authRouter.post(
     body('email').isEmail().normalizeEmail(),
     body('password').isString().isLength({ min: 6 }),
   ],
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json({ error: 'Invalid input', details: errors.array() });
@@ -47,25 +34,30 @@ authRouter.post(
     }
 
     const { email, password } = req.body;
+    const db = await getDb();
 
-    if (users.find((u) => u.email === email)) {
+    // Check if email already exists
+    const existing = await db.query<UserRow>(
+      `SELECT id FROM users WHERE email = $1`,
+      [email],
+    );
+    if (existing.rows.length > 0) {
       res.status(409).json({ error: 'Email already registered', code: 'CONFLICT' });
       return;
     }
 
+    const id = `usr_${crypto.randomBytes(4).toString('hex')}`;
     const salt = crypto.randomBytes(16).toString('hex');
-    const user: StoredUser = {
-      id: `usr_${crypto.randomBytes(4).toString('hex')}`,
-      email,
-      passwordHash: hashPassword(password, salt),
-      salt,
-      role: 'user',
-    };
-    users.push(user);
+    const passwordHash = hashPassword(password, salt);
 
-    const token = signToken({ sub: user.id, email: user.email, role: user.role });
-    logger.info({ userId: user.id, email: user.email }, 'User registered');
-    res.status(201).json({ token, user: { id: user.id, email: user.email, role: user.role } });
+    await db.query(
+      `INSERT INTO users (id, email, password_hash, salt, role) VALUES ($1, $2, $3, $4, $5)`,
+      [id, email, passwordHash, salt, 'user'],
+    );
+
+    const token = signToken({ sub: id, email, role: 'user' });
+    logger.info({ userId: id, email }, 'User registered');
+    res.status(201).json({ token, user: { id, email, role: 'user' } });
   },
 );
 
@@ -76,7 +68,7 @@ authRouter.post(
     body('email').isEmail().normalizeEmail(),
     body('password').isString().notEmpty(),
   ],
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json({ error: 'Invalid input', details: errors.array() });
@@ -84,7 +76,13 @@ authRouter.post(
     }
 
     const { email, password } = req.body;
-    const user = users.find((u) => u.email === email);
+    const db = await getDb();
+
+    const result = await db.query<UserRow>(
+      `SELECT id, email, password_hash, salt, role FROM users WHERE email = $1`,
+      [email],
+    );
+    const user = result.rows[0];
 
     if (!user) {
       res.status(401).json({ error: 'Invalid credentials', code: 'UNAUTHORIZED' });
@@ -92,7 +90,7 @@ authRouter.post(
     }
 
     const hash = hashPassword(password, user.salt);
-    const expected = Buffer.from(user.passwordHash, 'hex');
+    const expected = Buffer.from(user.password_hash, 'hex');
     const actual = Buffer.from(hash, 'hex');
 
     if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) {
