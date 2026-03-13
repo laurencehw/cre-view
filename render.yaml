@@ -11,7 +11,7 @@ services:
     name: creview-api
     runtime: node
     plan: free
-    buildCommand: npm install --include=dev && npm run build --workspace=backend
+    buildCommand: NODE_ENV=development npm install && npm run build --workspace=backend
     startCommand: cd backend && node dist/db/migrate.js && node dist/index.js
     envVars:
       - key: NODE_ENV
