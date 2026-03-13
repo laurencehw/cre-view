@@ -48,11 +48,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await fetch(`${apiUrl}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${apiUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+    } catch {
+      throw new Error(`Network error reaching API (${apiUrl}). Check CORS_ORIGIN on the server.`);
+    }
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

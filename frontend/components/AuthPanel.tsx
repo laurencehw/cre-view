@@ -35,11 +35,16 @@ export default function AuthPanel() {
 
     try {
       if (mode === 'register') {
-        const res = await fetch(`${apiUrl}/api/auth/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
+        let res: Response;
+        try {
+          res = await fetch(`${apiUrl}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+          });
+        } catch (fetchErr) {
+          throw new Error(`Network error reaching API (${apiUrl}). Check CORS_ORIGIN on the server.`);
+        }
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.error ?? 'Registration failed');

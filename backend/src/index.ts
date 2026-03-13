@@ -16,7 +16,21 @@ const app = express();
 const PORT = process.env.PORT ?? 4000;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000' }));
+const corsOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:3000';
+// Support comma-separated origins and normalise (strip trailing slash)
+const allowedOrigins = corsOrigin.split(',').map((o) => o.trim().replace(/\/+$/, ''));
+app.use(cors({
+  origin(origin, callback) {
+    // Allow requests with no Origin (curl, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    logger.warn({ origin, allowedOrigins }, 'CORS rejected origin');
+    callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(pinoHttp({ logger }));
