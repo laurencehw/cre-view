@@ -21,11 +21,16 @@ const STORAGE_KEY = 'cre_view_token';
 
 function parseJwtPayload(token: string): AuthState['user'] {
   try {
-    const base64 = token.split('.')[1];
-    const json = atob(base64.replace(/-/g, '+').replace(/_/g, '/'));
+    let base64 = token.split('.')[1];
+    // Convert base64url to standard base64 and add padding if needed
+    base64 = base64.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4 !== 0) base64 += '=';
+    const json = atob(base64);
     const payload = JSON.parse(json);
+    // Validate required claims
+    if (typeof payload.sub !== 'string') return null;
     // Reject expired tokens so stale localStorage entries don't fake auth
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+    if (typeof payload.exp === 'number' && isFinite(payload.exp) && payload.exp <= Math.floor(Date.now() / 1000)) {
       return null;
     }
     return payload;

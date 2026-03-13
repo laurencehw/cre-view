@@ -111,11 +111,18 @@ export async function getDb(): Promise<DbClient> {
 
   pgPoolPromise = (async () => {
     if (process.env.DATABASE_URL) {
-      pgPool = await createPgClient();
+      const client = await createPgClient();
+      // On connection failure, createPgClient returns a MockDbClient.
+      // Only cache the pool if it's a real connection, allowing retries on failure.
+      if (!(client instanceof MockDbClient)) {
+        pgPool = client;
+      }
+      return client;
     } else {
+      // If no DATABASE_URL, we intend to use and cache the mock client.
       pgPool = new MockDbClient();
+      return pgPool;
     }
-    return pgPool;
   })();
 
   try {
@@ -126,6 +133,10 @@ export async function getDb(): Promise<DbClient> {
 }
 
 export async function closeDb(): Promise<void> {
+  // If initialization is in-flight, wait for it to finish before closing
+  if (pgPoolPromise) {
+    await pgPoolPromise.catch(() => {});
+  }
   if (pgPool) {
     await pgPool.end();
     pgPool = null;
