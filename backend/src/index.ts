@@ -16,26 +16,7 @@ const app = express();
 const PORT = process.env.PORT ?? 4000;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-const corsOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:3000';
-// Support comma-separated origins and normalise (strip trailing slash)
-const allowedOrigins = corsOrigin.split(',').map((o) => o.trim().replace(/\/+$/, ''));
-app.use(cors({
-  origin(origin, callback) {
-    // Allow requests with no Origin (curl, server-to-server)
-    if (!origin) return callback(null, true);
-    // Allow configured origins
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    // Allow any *.onrender.com subdomain (safe — each Render app has its own subdomain)
-    if (/^https:\/\/[a-z0-9-]+\.onrender\.com$/.test(origin)) return callback(null, true);
-    // Allow localhost for development
-    if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true);
-    logger.warn({ origin, allowedOrigins }, 'CORS rejected origin');
-    callback(new Error(`Origin ${origin} not allowed by CORS`));
-  },
-  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-}));
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(pinoHttp({ logger }));
@@ -58,7 +39,20 @@ app.use('/api', authRouter);
 app.use('/api', analyzeRouter);
 app.use('/api', buildingsRouter);
 
-// ─── 404 Handler ─────────────────────────────────────────────────────────────
+// ─── Serve frontend static files (production) ───────────────────────────────
+// The Next.js static export lives at frontend/out (built at deploy time).
+// Serving it from Express eliminates CORS entirely — same origin for API + UI.
+const frontendDir = path.join(__dirname, '..', '..', 'frontend', 'out');
+app.use(express.static(frontendDir));
+// SPA fallback: any non-API route serves index.html
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(frontendDir, 'index.html'), (err) => {
+    if (err) next();
+  });
+});
+
+// ─── 404 Handler (API only) ─────────────────────────────────────────────────
 app.use((_req, res) => {
   res.status(404).json({ error: 'Not found', code: 'NOT_FOUND' });
 });

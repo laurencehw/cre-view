@@ -6,12 +6,12 @@ databases:
     postgresMajorVersion: "16"
 
 services:
-  # ─── Backend API ────────────────────────────────────────────────────────────
+  # Single service: Express serves both API and the Next.js static export
   - type: web
-    name: creview-api
+    name: creview-app
     runtime: node
     plan: free
-    buildCommand: NODE_ENV=development npm install && npm run build --workspace=backend
+    buildCommand: NODE_ENV=development npm install && npm run build --workspace=backend && npm run build --workspace=frontend
     startCommand: cd backend && node dist/db/migrate.js && node dist/index.js
     envVars:
       - key: NODE_ENV
@@ -28,25 +28,5 @@ services:
         value: openai
       - key: OPENAI_API_KEY
         sync: false  # set manually in dashboard
-      - key: CORS_ORIGIN
-        sync: false  # set to your frontend URL after deploy
       - key: LOG_LEVEL
         value: info
-
-  # ─── Frontend (static site) ────────────────────────────────────────────────
-  - type: web
-    name: creview-web
-    runtime: static
-    buildCommand: npm install && npm run build --workspace=frontend
-    staticPublishPath: frontend/out
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: public, max-age=0, must-revalidate
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: NEXT_PUBLIC_API_URL
-        sync: false  # set to your backend URL after deploy
