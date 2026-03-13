@@ -70,6 +70,7 @@ class MockDbClient implements DbClient {
 // ─── PostgreSQL client (when pg is available) ────────────────────────────────
 
 let pgPool: DbClient | null = null;
+let pgPoolPromise: Promise<DbClient> | null = null;
 
 async function createPgClient(): Promise<DbClient> {
   try {
@@ -104,16 +105,38 @@ async function createPgClient(): Promise<DbClient> {
 export async function getDb(): Promise<DbClient> {
   if (pgPool) return pgPool;
 
-  if (process.env.DATABASE_URL) {
-    pgPool = await createPgClient();
-  } else {
-    pgPool = new MockDbClient();
-  }
+  // Prevent race condition: if two calls arrive before the first resolves,
+  // reuse the same in-flight promise instead of creating duplicate pools.
+  if (pgPoolPromise) return pgPoolPromise;
 
-  return pgPool;
+  pgPoolPromise = (async () => {
+    if (process.env.DATABASE_URL) {
+      const client = await createPgClient();
+      // On connection failure, createPgClient returns a MockDbClient.
+      // Only cache the pool if it's a real connection, allowing retries on failure.
+      if (!(client instanceof MockDbClient)) {
+        pgPool = client;
+      }
+      return client;
+    } else {
+      // If no DATABASE_URL, we intend to use and cache the mock client.
+      pgPool = new MockDbClient();
+      return pgPool;
+    }
+  })();
+
+  try {
+    return await pgPoolPromise;
+  } finally {
+    pgPoolPromise = null;
+  }
 }
 
 export async function closeDb(): Promise<void> {
+  // If initialization is in-flight, wait for it to finish before closing
+  if (pgPoolPromise) {
+    await pgPoolPromise.catch(() => {});
+  }
   if (pgPool) {
     await pgPool.end();
     pgPool = null;
