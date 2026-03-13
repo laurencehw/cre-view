@@ -3,7 +3,12 @@
 
 -- ─── Extensions ───────────────────────────────────────────────────────────────
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS postgis;     -- optional, for spatial queries
+-- PostGIS is optional and not available on all hosts (e.g. Render free tier)
+DO $$ BEGIN
+  CREATE EXTENSION IF NOT EXISTS postgis;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'PostGIS not available, skipping';
+END $$;
 
 -- ─── Buildings ────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS buildings (

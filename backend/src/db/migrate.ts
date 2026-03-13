@@ -5,6 +5,23 @@
 import fs from 'fs';
 import path from 'path';
 
+function findSqlFile(filename: string): string | null {
+  // Try multiple paths since tsc doesn't copy .sql files to dist/
+  const candidates = [
+    path.join(__dirname, filename),                          // dist/db/schema.sql (if copied)
+    path.join(__dirname, '..', '..', 'src', 'db', filename), // backend/src/db/schema.sql
+    path.join(__dirname, '..', '..', '..', 'src', 'db', filename), // one more level up
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      console.log(`Found ${filename} at ${p}`);
+      return p;
+    }
+  }
+  console.warn(`${filename} not found in any of:`, candidates);
+  return null;
+}
+
 async function migrate() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -12,39 +29,34 @@ async function migrate() {
     return;
   }
 
+  console.log('Starting database migration...');
+
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Pool } = require('pg');
   const pool = new Pool({ connectionString: databaseUrl });
 
   try {
+    // Verify connection
+    await pool.query('SELECT 1');
+    console.log('Database connection verified');
+
     // Run schema
-    const schemaPath = path.join(__dirname, 'schema.sql');
-    if (fs.existsSync(schemaPath)) {
+    const schemaPath = findSqlFile('schema.sql');
+    if (schemaPath) {
       const schema = fs.readFileSync(schemaPath, 'utf-8');
       await pool.query(schema);
-      console.log('Schema applied');
-    } else {
-      // When compiled, SQL files aren't copied — look relative to src
-      const srcSchemaPath = path.join(__dirname, '..', '..', 'src', 'db', 'schema.sql');
-      if (fs.existsSync(srcSchemaPath)) {
-        const schema = fs.readFileSync(srcSchemaPath, 'utf-8');
-        await pool.query(schema);
-        console.log('Schema applied (from src)');
-      } else {
-        console.warn('schema.sql not found, skipping');
-      }
+      console.log('Schema applied successfully');
     }
 
     // Run seed (idempotent — uses ON CONFLICT DO NOTHING)
-    const seedPath = path.join(__dirname, 'seed.sql');
-    const srcSeedPath = path.join(__dirname, '..', '..', 'src', 'db', 'seed.sql');
-    const actualSeedPath = fs.existsSync(seedPath) ? seedPath : fs.existsSync(srcSeedPath) ? srcSeedPath : null;
-
-    if (actualSeedPath) {
-      const seed = fs.readFileSync(actualSeedPath, 'utf-8');
+    const seedPath = findSqlFile('seed.sql');
+    if (seedPath) {
+      const seed = fs.readFileSync(seedPath, 'utf-8');
       await pool.query(seed);
-      console.log('Seed data applied');
+      console.log('Seed data applied successfully');
     }
+
+    console.log('Migration complete');
   } catch (err) {
     console.error('Migration failed:', err);
     process.exit(1);
