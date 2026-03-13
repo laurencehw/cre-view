@@ -16,7 +16,9 @@ const app = express();
 const PORT = process.env.PORT ?? 4000;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use(cors());
+// Restrict CORS in production; allow all in development
+const corsOrigin = process.env.CORS_ORIGIN;
+app.use(cors(corsOrigin ? { origin: corsOrigin, credentials: true } : undefined));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(pinoHttp({ logger }));

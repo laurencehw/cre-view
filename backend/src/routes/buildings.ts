@@ -155,7 +155,15 @@ buildingsRouter.get(
         ]);
       }
 
-      const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
+      // Sanitize cell values to prevent CSV injection: prefix dangerous leading
+      // characters (=, +, -, @, \t, \r) with a single quote so spreadsheet apps
+      // treat them as text rather than formulas.
+      const sanitizeCell = (c: string): string => {
+        let safe = c.replace(/"/g, '""');
+        if (/^[=+\-@\t\r]/.test(safe)) safe = `'${safe}`;
+        return `"${safe}"`;
+      };
+      const csv = rows.map((r) => r.map(sanitizeCell).join(',')).join('\n');
       const filename = `${building.name.replace(/[^a-zA-Z0-9]/g, '_')}_financials.csv`;
 
       res.setHeader('Content-Type', 'text/csv');
