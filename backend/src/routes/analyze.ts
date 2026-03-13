@@ -6,6 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { body, validationResult } from 'express-validator';
 import { MOCK_BUILDINGS } from '../data/mockData';
 import { createVisionService } from '../services/vision';
+import logger from '../services/logger';
+import { requireAuth } from '../middleware/auth';
 
 export const analyzeRouter = Router();
 
@@ -18,7 +20,7 @@ const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
 try {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 } catch (err) {
-  console.error(`Failed to create uploads directory at "${UPLOAD_DIR}":`, err);
+  logger.error(err, `Failed to create uploads directory at "${UPLOAD_DIR}"`);
   throw new Error('Server initialization failed: unable to create uploads directory');
 }
 
@@ -47,6 +49,7 @@ const upload = multer({
 // ─── POST /api/analyze-skyline ────────────────────────────────────────────────
 analyzeRouter.post(
   '/analyze-skyline',
+  requireAuth,
   (req: Request, res: Response, next: NextFunction) => {
     upload.single('image')(req, res, (err) => {
       if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
@@ -85,7 +88,7 @@ analyzeRouter.post(
       const visionResult = await visionService.analyze(imageBuffer, req.file.mimetype);
 
       // Clean up uploaded file after analysis
-      fs.promises.unlink(req.file.path).catch((err) => console.warn(`Failed to delete uploaded file ${req.file?.path}:`, err));
+      fs.promises.unlink(req.file.path).catch((err) => logger.warn(err, `Failed to delete uploaded file ${req.file?.path}`));
 
       // Cross-reference detected landmarks against known buildings
       const detectedBuildings = visionResult.landmarks

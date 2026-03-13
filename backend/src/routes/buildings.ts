@@ -1,12 +1,14 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { param, query, validationResult } from 'express-validator';
 import { listBuildings, getBuildingById, getFinancialsByBuildingId } from '../db/repositories';
+import { optionalAuth, requireAuth } from '../middleware/auth';
 
 export const buildingsRouter = Router();
 
 // ─── GET /api/buildings ───────────────────────────────────────────────────────
 buildingsRouter.get(
   '/buildings',
+  optionalAuth,
   [
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
@@ -36,6 +38,7 @@ buildingsRouter.get(
 // ─── GET /api/buildings/:id ───────────────────────────────────────────────────
 buildingsRouter.get(
   '/buildings/:id',
+  optionalAuth,
   [param('id').isString().notEmpty()],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -61,6 +64,7 @@ buildingsRouter.get(
 // ─── GET /api/buildings/:id/financials ───────────────────────────────────────
 buildingsRouter.get(
   '/buildings/:id/financials',
+  requireAuth,
   [param('id').isString().notEmpty()],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -93,6 +97,7 @@ buildingsRouter.get(
 // Returns financial data as a downloadable CSV file.
 buildingsRouter.get(
   '/buildings/:id/financials/export',
+  requireAuth,
   [param('id').isString().notEmpty()],
   async (req: Request, res: Response, next: NextFunction) => {
     try {

@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import pinoHttp from 'pino-http';
+import logger from './services/logger';
 import { analyzeRouter } from './routes/analyze';
 import { buildingsRouter } from './routes/buildings';
 import { healthRouter } from './routes/health';
@@ -16,6 +18,7 @@ const PORT = process.env.PORT ?? 4000;
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(pinoHttp({ logger }));
 
 // Enable trust proxy so req.ip reflects the real client IP behind a reverse proxy
 app.set('trust proxy', 1);
@@ -41,14 +44,14 @@ app.use((_req, res) => {
 
 // ─── Error Handler ────────────────────────────────────────────────────────────
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error(err);
+  logger.error(err, 'Unhandled error');
   res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' });
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log(`CRE View API running on http://localhost:${PORT}`);
+    logger.info(`CRE View API running on http://localhost:${PORT}`);
   });
 }
 

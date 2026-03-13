@@ -6,6 +6,8 @@
 //
 // Then set DATABASE_URL in your .env file.
 
+import logger from '../services/logger';
+
 export interface DbClient {
   query<T = Record<string, unknown>>(text: string, values?: unknown[]): Promise<{ rows: T[] }>;
   end(): Promise<void>;
@@ -61,7 +63,7 @@ async function createPgClient(): Promise<DbClient> {
 
     // Verify the connection
     await pool.query('SELECT 1');
-    console.log('Connected to PostgreSQL');
+    logger.info('Connected to PostgreSQL');
 
     return {
       query: <T = Record<string, unknown>>(text: string, values?: unknown[]) =>
@@ -69,7 +71,7 @@ async function createPgClient(): Promise<DbClient> {
       end: () => pool.end(),
     };
   } catch (err) {
-    console.warn('PostgreSQL not available, using mock data:', (err as Error).message);
+    logger.warn('PostgreSQL not available, using mock data: %s', (err as Error).message);
     return new MockDbClient();
   }
 }

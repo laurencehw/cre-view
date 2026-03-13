@@ -1,5 +1,13 @@
 import request from 'supertest';
 import app from '../../index';
+import { signToken } from '../../middleware/auth';
+
+let authToken: string;
+
+beforeAll(() => {
+  process.env.JWT_SECRET = 'test-secret-for-api-tests';
+  authToken = signToken({ sub: 'test-user', email: 'test@example.com', role: 'admin' });
+});
 
 describe('GET /api/health', () => {
   it('returns status ok', async () => {
@@ -52,8 +60,10 @@ describe('GET /api/buildings/:id', () => {
 });
 
 describe('GET /api/buildings/:id/financials', () => {
-  it('returns financial data for a building', async () => {
-    const res = await request(app).get('/api/buildings/bld_001/financials');
+  it('returns financial data for a building with auth', async () => {
+    const res = await request(app)
+      .get('/api/buildings/bld_001/financials')
+      .set('Authorization', `Bearer ${authToken}`);
     expect(res.status).toBe(200);
     expect(res.body.buildingId).toBe('bld_001');
     expect(res.body.valuation).toBeDefined();
@@ -62,15 +72,25 @@ describe('GET /api/buildings/:id/financials', () => {
     expect(Array.isArray(res.body.equity.capTable)).toBe(true);
   });
 
+  it('returns 401 without auth token', async () => {
+    const res = await request(app).get('/api/buildings/bld_001/financials');
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('UNAUTHORIZED');
+  });
+
   it('returns 404 for unknown building financials', async () => {
-    const res = await request(app).get('/api/buildings/bld_unknown/financials');
+    const res = await request(app)
+      .get('/api/buildings/bld_unknown/financials')
+      .set('Authorization', `Bearer ${authToken}`);
     expect(res.status).toBe(404);
   });
 });
 
 describe('GET /api/buildings/:id/financials/export', () => {
   it('returns CSV with correct headers and content', async () => {
-    const res = await request(app).get('/api/buildings/bld_001/financials/export');
+    const res = await request(app)
+      .get('/api/buildings/bld_001/financials/export')
+      .set('Authorization', `Bearer ${authToken}`);
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/text\/csv/);
     expect(res.headers['content-disposition']).toMatch(/attachment/);
@@ -82,9 +102,25 @@ describe('GET /api/buildings/:id/financials/export', () => {
     expect(res.text).toContain('Empire State Building');
   });
 
+  it('returns 401 without auth token', async () => {
+    const res = await request(app).get('/api/buildings/bld_001/financials/export');
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('UNAUTHORIZED');
+  });
+
   it('returns 404 for unknown building', async () => {
-    const res = await request(app).get('/api/buildings/bld_unknown/financials/export');
+    const res = await request(app)
+      .get('/api/buildings/bld_unknown/financials/export')
+      .set('Authorization', `Bearer ${authToken}`);
     expect(res.status).toBe(404);
+  });
+});
+
+describe('POST /api/analyze-skyline', () => {
+  it('returns 401 without auth token', async () => {
+    const res = await request(app).post('/api/analyze-skyline');
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('UNAUTHORIZED');
   });
 });
 

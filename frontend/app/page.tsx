@@ -58,11 +58,15 @@ export default function HomePage() {
       if (!res.ok) {
         let errorMessage = 'Analysis failed';
         try {
-          const body = await res.json();
-          errorMessage = body.error ?? errorMessage;
+          const text = await res.text();
+          try {
+            const body = JSON.parse(text);
+            errorMessage = body.error ?? errorMessage;
+          } catch {
+            errorMessage = text || errorMessage;
+          }
         } catch {
-          const text = await res.text().catch(() => '');
-          errorMessage = text || errorMessage;
+          // network-level failure; keep default message
         }
         throw new Error(errorMessage);
       }

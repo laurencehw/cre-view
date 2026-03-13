@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
+import logger from '../services/logger';
 
 // Lightweight JWT-like auth middleware.
 // Uses Node's built-in crypto so there's no external dependency to install.
@@ -122,7 +123,7 @@ export function optionalAuth(req: Request, res: Response, next: NextFunction): v
     try {
       req.user = verifyToken(authHeader.slice(7));
     } catch (err) {
-      console.debug('optionalAuth: token verification failed:', err instanceof Error ? err.message : err);
+      logger.debug('optionalAuth: token verification failed: %s', err instanceof Error ? err.message : err);
     }
   }
   next();

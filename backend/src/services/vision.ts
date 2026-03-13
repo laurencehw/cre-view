@@ -34,6 +34,60 @@ class MockVisionProvider implements VisionProvider {
   }
 }
 
+// ─── OpenAI Vision provider (GPT-4o) ─────────────────────────────────────────
+class OpenAIVisionProvider implements VisionProvider {
+  private readonly apiKey: string;
+
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+  }
+
+  async analyze(imageBuffer: Buffer, mimeType: string): Promise<VisionResult> {
+    const { default: OpenAI } = await import('openai');
+    const client = new OpenAI({ apiKey: this.apiKey });
+
+    const base64Image = imageBuffer.toString('base64');
+    const dataUrl = `data:${mimeType};base64,${base64Image}`;
+
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o',
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content: `You are a building identification AI. Analyze the skyline image and return a JSON object with this exact structure:
+{
+  "labels": [{ "name": "string", "confidence": 0.0-1.0, "boundingBox": { "x": number, "y": number, "width": number, "height": number } }],
+  "landmarks": [{ "name": "string", "confidence": 0.0-1.0, "boundingBox": { "x": number, "y": number, "width": number, "height": number } }]
+}
+labels: general scene labels (e.g. "skyscraper", "urban", "building").
+landmarks: specific named buildings you can identify. Include bounding box coordinates in pixel space relative to the image dimensions.
+Only include buildings you can identify with reasonable confidence.`,
+        },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Identify the buildings in this skyline photo.' },
+            { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
+          ],
+        },
+      ],
+      max_tokens: 1024,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      return { labels: [], landmarks: [] };
+    }
+
+    const parsed = JSON.parse(content) as VisionResult;
+    return {
+      labels: Array.isArray(parsed.labels) ? parsed.labels : [],
+      landmarks: Array.isArray(parsed.landmarks) ? parsed.landmarks : [],
+    };
+  }
+}
+
 // ─── Azure provider stub ──────────────────────────────────────────────────────
 class AzureVisionProvider implements VisionProvider {
   constructor(
@@ -81,6 +135,13 @@ export function createVisionService(): VisionProvider {
     }
     case 'gcp':
       return new GcpVisionProvider();
+    case 'openai': {
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        throw new VisionProviderNotConfiguredError('openai (missing OPENAI_API_KEY)');
+      }
+      return new OpenAIVisionProvider(apiKey);
+    }
     case 'mock':
       return new MockVisionProvider();
     default:
