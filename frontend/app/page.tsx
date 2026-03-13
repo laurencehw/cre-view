@@ -6,9 +6,13 @@ import BuildingCard from '@/components/BuildingCard';
 import FinancialPanel from '@/components/FinancialPanel';
 import SkylineOverlay from '@/components/SkylineOverlay';
 import BuildingMap from '@/components/BuildingMap';
+import AuthPanel from '@/components/AuthPanel';
+import { useAuth } from '@/lib/auth';
 import type { DetectedBuilding, Building, BuildingFinancials } from '@/lib/types';
 
 export default function HomePage() {
+  const { isAuthenticated, authHeaders } = useAuth();
+
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [detectedBuildings, setDetectedBuildings] = useState<DetectedBuilding[]>([]);
   const [selectedBuilding, setSelectedBuilding] = useState<DetectedBuilding | null>(null);
@@ -47,13 +51,22 @@ export default function HomePage() {
     setImagePreviewUrl(URL.createObjectURL(file));
 
     try {
+      if (!isAuthenticated) {
+        throw new Error('Please sign in to analyze skyline images');
+      }
+
       const formData = new FormData();
       formData.append('image', file);
 
       const res = await fetch(`${apiUrl}/api/analyze-skyline`, {
         method: 'POST',
+        headers: authHeaders(),
         body: formData,
       });
+
+      if (res.status === 401) {
+        throw new Error('Session expired — please sign in again');
+      }
 
       if (!res.ok) {
         let errorMessage = 'Analysis failed';
@@ -75,9 +88,11 @@ export default function HomePage() {
       const detected: DetectedBuilding[] = data.detectedBuildings ?? [];
       setDetectedBuildings(detected);
 
-      // Fetch building details for the map
+      // Fetch building details for the map (optionalAuth, no token required)
       const detailPromises = detected.map((b) =>
-        fetch(`${apiUrl}/api/buildings/${b.buildingId}`)
+        fetch(`${apiUrl}/api/buildings/${b.buildingId}`, {
+          headers: authHeaders(),
+        })
           .then((r) => (r.ok ? r.json() : null))
           .catch(() => null),
       );
@@ -100,9 +115,11 @@ export default function HomePage() {
     setFinancialError(null);
     setIsLoadingFinancials(true);
 
+    const headers = authHeaders();
+
     // Start both requests in parallel
-    const financialsPromise = fetch(`${apiUrl}/api/buildings/${building.buildingId}/financials`);
-    const detailsPromise = fetch(`${apiUrl}/api/buildings/${building.buildingId}`);
+    const financialsPromise = fetch(`${apiUrl}/api/buildings/${building.buildingId}/financials`, { headers });
+    const detailsPromise = fetch(`${apiUrl}/api/buildings/${building.buildingId}`, { headers });
 
     try {
       // Await financials first so the primary panel can render ASAP
@@ -110,6 +127,9 @@ export default function HomePage() {
 
       if (latestFetchRef.current !== fetchId) return;
 
+      if (financialsRes.status === 401) {
+        throw new Error('Please sign in to view financial data');
+      }
       if (!financialsRes.ok) throw new Error('Failed to load financial data');
       const financialsData = await financialsRes.json();
 
@@ -135,7 +155,7 @@ export default function HomePage() {
         setIsLoadingFinancials(false);
       }
     }
-  }, [apiUrl]);
+  }, [apiUrl, authHeaders]);
 
   // Filtered building list (used by both render and keyboard nav)
   const filteredBuildings = useMemo(
@@ -182,12 +202,15 @@ export default function HomePage() {
   return (
     <main className="flex flex-col min-h-screen">
       {/* Header */}
-      <header className="border-b border-gray-800 px-6 py-4 flex items-center gap-3">
-        <span className="text-2xl">🏙️</span>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">CRE View</h1>
-          <p className="text-xs text-gray-400">Skyline Financial Intelligence</p>
+      <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🏙️</span>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">CRE View</h1>
+            <p className="text-xs text-gray-400">Skyline Financial Intelligence</p>
+          </div>
         </div>
+        <AuthPanel />
       </header>
 
       <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
@@ -197,6 +220,13 @@ export default function HomePage() {
             <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
               Capture Skyline
             </h2>
+            {!isAuthenticated && (
+              <div className="rounded-lg bg-yellow-900/20 border border-yellow-800/50 p-3 text-xs text-yellow-300 mb-3">
+                Sign in to analyze skylines and view financial data.
+                <br />
+                <span className="text-yellow-500">Dev account: dev@creview.local / dev123</span>
+              </div>
+            )}
             <ImageCapture onImageSelected={handleImageSelected} isLoading={isAnalyzing} />
           </div>
 

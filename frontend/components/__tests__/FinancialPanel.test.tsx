@@ -1,7 +1,12 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import FinancialPanel from '../FinancialPanel';
+import { AuthProvider } from '@/lib/auth';
 import type { DetectedBuilding, Building, BuildingFinancials } from '@/lib/types';
+
+function renderWithAuth(ui: React.ReactElement) {
+  return render(<AuthProvider>{ui}</AuthProvider>);
+}
 
 const mockBuilding: DetectedBuilding = {
   buildingId: 'bld_001',
@@ -58,13 +63,13 @@ const mockFinancials: BuildingFinancials = {
 
 describe('FinancialPanel', () => {
   it('renders building name and as-of date', () => {
-    render(<FinancialPanel building={mockBuilding} financials={mockFinancials} />);
+    renderWithAuth(<FinancialPanel building={mockBuilding} financials={mockFinancials} />);
     expect(screen.getByText('Empire State Building')).toBeInTheDocument();
     expect(screen.getByText('As of 2024-01-01')).toBeInTheDocument();
   });
 
   it('renders KPI stat cards', () => {
-    render(<FinancialPanel building={mockBuilding} financials={mockFinancials} />);
+    renderWithAuth(<FinancialPanel building={mockBuilding} financials={mockFinancials} />);
     expect(screen.getByText('Valuation')).toBeInTheDocument();
     expect(screen.getByText('Cap Rate')).toBeInTheDocument();
     expect(screen.getByText('NOI')).toBeInTheDocument();
@@ -74,12 +79,12 @@ describe('FinancialPanel', () => {
   });
 
   it('renders valuation value', () => {
-    render(<FinancialPanel building={mockBuilding} financials={mockFinancials} />);
+    renderWithAuth(<FinancialPanel building={mockBuilding} financials={mockFinancials} />);
     expect(screen.getByText('$2.1B')).toBeInTheDocument();
   });
 
   it('renders debt structure table', () => {
-    render(<FinancialPanel building={mockBuilding} financials={mockFinancials} />);
+    renderWithAuth(<FinancialPanel building={mockBuilding} financials={mockFinancials} />);
     expect(screen.getByText('Senior Loan')).toBeInTheDocument();
     expect(screen.getByText('Mezzanine')).toBeInTheDocument();
     expect(screen.getByText('Total Debt')).toBeInTheDocument();
@@ -87,14 +92,14 @@ describe('FinancialPanel', () => {
   });
 
   it('renders cap table with investors', () => {
-    render(<FinancialPanel building={mockBuilding} financials={mockFinancials} />);
+    renderWithAuth(<FinancialPanel building={mockBuilding} financials={mockFinancials} />);
     expect(screen.getByText('Empire State Realty Trust')).toBeInTheDocument();
     expect(screen.getByText('Sovereign Wealth Fund A')).toBeInTheDocument();
     expect(screen.getByText('Family Office B')).toBeInTheDocument();
   });
 
   it('renders building details when provided', () => {
-    render(<FinancialPanel building={mockBuilding} financials={mockFinancials} details={mockDetails} />);
+    renderWithAuth(<FinancialPanel building={mockBuilding} financials={mockFinancials} details={mockDetails} />);
     expect(screen.getByText('350 Fifth Avenue, New York, NY 10118')).toBeInTheDocument();
     expect(screen.getByText('102 floors')).toBeInTheDocument();
     expect(screen.getByText('Mixed-Use')).toBeInTheDocument();
@@ -102,7 +107,7 @@ describe('FinancialPanel', () => {
   });
 
   it('renders without building details gracefully', () => {
-    render(<FinancialPanel building={mockBuilding} financials={mockFinancials} details={null} />);
+    renderWithAuth(<FinancialPanel building={mockBuilding} financials={mockFinancials} details={null} />);
     expect(screen.getByText('Empire State Building')).toBeInTheDocument();
     expect(screen.queryByText('102 floors')).not.toBeInTheDocument();
   });
@@ -110,7 +115,7 @@ describe('FinancialPanel', () => {
   it('calculates DSCR correctly', () => {
     // NOI = 94.5M, Debt service = (900M * 0.062) + (300M * 0.095) = 55.8M + 28.5M = 84.3M
     // DSCR = 94.5 / 84.3 = ~1.12x
-    render(<FinancialPanel building={mockBuilding} financials={mockFinancials} />);
+    renderWithAuth(<FinancialPanel building={mockBuilding} financials={mockFinancials} />);
     expect(screen.getByText('1.12x')).toBeInTheDocument();
   });
 
@@ -122,7 +127,7 @@ describe('FinancialPanel', () => {
         seniorLoan: mockFinancials.debt.seniorLoan,
       },
     };
-    render(<FinancialPanel building={mockBuilding} financials={noMezz} />);
+    renderWithAuth(<FinancialPanel building={mockBuilding} financials={noMezz} />);
     expect(screen.getByText('Senior Loan')).toBeInTheDocument();
     expect(screen.queryByText('Mezzanine')).not.toBeInTheDocument();
   });

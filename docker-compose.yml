@@ -21,11 +21,12 @@ services:
       - '4000:4000'
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - AZURE_VISION_ENDPOINT=${AZURE_VISION_ENDPOINT}
-      - AZURE_VISION_KEY=${AZURE_VISION_KEY}
+      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD:-password}@db:5432/creview
+      - VISION_PROVIDER=${VISION_PROVIDER:-mock}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - CORS_ORIGIN=http://localhost:3000
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     depends_on:
       - db
     volumes:
@@ -42,6 +43,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backend/src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./backend/src/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
 
 volumes:
   pgdata:

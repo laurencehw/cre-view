@@ -2,6 +2,7 @@
 
 import type { DetectedBuilding, Building, BuildingFinancials } from '@/lib/types';
 import { formatCurrency, formatPercent } from '@/lib/format';
+import { useAuth } from '@/lib/auth';
 
 interface FinancialPanelProps {
   building: DetectedBuilding;
@@ -20,12 +21,24 @@ function StatCard({ label, value }: { label: string; value: string }) {
 
 function ExportButton({ buildingId, buildingName }: { buildingId: string; buildingName: string }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+  const { authHeaders } = useAuth();
 
-  const handleExport = () => {
-    const link = document.createElement('a');
-    link.href = `${apiUrl}/api/buildings/${buildingId}/financials/export`;
-    link.download = `${buildingName.replace(/[^a-zA-Z0-9]/g, '_')}_financials.csv`;
-    link.click();
+  const handleExport = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/api/buildings/${buildingId}/financials/export`, {
+        headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${buildingName.replace(/[^a-zA-Z0-9]/g, '_')}_financials.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Silently fail — user will see the button didn't work
+    }
   };
 
   return (

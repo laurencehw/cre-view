@@ -7,6 +7,7 @@ import logger from './services/logger';
 import { analyzeRouter } from './routes/analyze';
 import { buildingsRouter } from './routes/buildings';
 import { healthRouter } from './routes/health';
+import { authRouter } from './routes/auth';
 import { rateLimit } from './middleware/rateLimit';
 
 dotenv.config();
@@ -34,6 +35,7 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api', healthRouter);
+app.use('/api', authRouter);
 app.use('/api', analyzeRouter);
 app.use('/api', buildingsRouter);
 
