@@ -229,8 +229,9 @@ function CustomAuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem(STORAGE_KEY, token);
           setAuthState({ token, user });
         }
-      } catch {
+      } catch (error) {
         // Refresh failed — user will be logged out when token naturally expires
+        console.warn('Token refresh failed:', error);
       }
     }, delayMs);
 

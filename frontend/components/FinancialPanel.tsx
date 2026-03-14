@@ -40,6 +40,7 @@ function ExportButton({ buildingId, buildingName }: { buildingId: string; buildi
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
+      console.error('CSV export failed:', err);
       setExportError(err instanceof Error ? err.message : 'Export failed');
     }
   };

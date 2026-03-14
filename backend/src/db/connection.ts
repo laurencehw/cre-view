@@ -37,7 +37,10 @@ function loadPersistedUsers(): MockUser[] {
   try {
     const data = fs.readFileSync(USERS_FILE, 'utf-8');
     return JSON.parse(data);
-  } catch {
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      logger.warn('Failed to load or parse .mock-users.json: %s', (error as Error).message);
+    }
     return [];
   }
 }

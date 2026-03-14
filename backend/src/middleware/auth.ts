@@ -105,7 +105,13 @@ export function verifyToken(token: string): TokenPayload {
 
 async function verifyAnyToken(token: string): Promise<TokenPayload> {
   if (supabaseEnabled) {
-    return verifySupabaseToken(token);
+    // Try Supabase first, fall back to custom JWT so that tokens issued by
+    // the custom /auth/* endpoints still work when Supabase is enabled.
+    try {
+      return await verifySupabaseToken(token);
+    } catch {
+      return verifyToken(token);
+    }
   }
   return verifyToken(token);
 }

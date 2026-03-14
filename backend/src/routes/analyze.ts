@@ -97,6 +97,9 @@ analyzeRouter.post(
           .then(({ error }) => {
             if (error) logger.warn({ error }, 'Failed to upload to Supabase Storage');
             else logger.info({ storagePath }, 'Image uploaded to Supabase Storage');
+          })
+          .catch((err) => {
+            logger.warn({ err }, 'Supabase Storage upload rejected');
           });
       }
 
