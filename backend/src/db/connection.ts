@@ -114,6 +114,7 @@ async function createPgClient(): Promise<DbClient> {
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,
+      ssl: process.env.DATABASE_URL?.includes('supabase') ? { rejectUnauthorized: false } : undefined,
     });
 
     // Verify the connection

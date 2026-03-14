@@ -10,7 +10,9 @@ import { healthRouter } from './routes/health';
 import { authRouter } from './routes/auth';
 import { rateLimit } from './middleware/rateLimit';
 
-dotenv.config();
+// Load .env from project root (monorepo), falling back to cwd
+dotenv.config({ path: path.resolve(__dirname, '..', '..', '.env') });
+dotenv.config(); // also check cwd for local overrides
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
