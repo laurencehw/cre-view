@@ -121,20 +121,20 @@ analyzeRouter.post(
           // First try: match name AND city in address
           result = await db.query<{ id: string; name: string }>(
             `SELECT id, name FROM buildings
-             WHERE LOWER(name) LIKE $1 AND LOWER(address) LIKE $2
+             WHERE name != '' AND LOWER(name) LIKE $1 AND LOWER(address) LIKE $2
              ORDER BY name LIMIT 1`,
             [namePattern, `%${detectedCity.toLowerCase()}%`],
           );
           // Fallback: match name only if no city-specific match
           if (result.rows.length === 0) {
             result = await db.query<{ id: string; name: string }>(
-              `SELECT id, name FROM buildings WHERE LOWER(name) LIKE $1 ORDER BY name LIMIT 1`,
+              `SELECT id, name FROM buildings WHERE name != '' AND LOWER(name) LIKE $1 ORDER BY name LIMIT 1`,
               [namePattern],
             );
           }
         } else {
           result = await db.query<{ id: string; name: string }>(
-            `SELECT id, name FROM buildings WHERE LOWER(name) LIKE $1 ORDER BY name LIMIT 1`,
+            `SELECT id, name FROM buildings WHERE name != '' AND LOWER(name) LIKE $1 ORDER BY name LIMIT 1`,
             [namePattern],
           );
         }
@@ -159,7 +159,7 @@ analyzeRouter.post(
       let results = detectedBuildings;
       if (results.length === 0) {
         const fallback = await db.query<{ id: string; name: string }>(
-          `SELECT id, name FROM buildings ORDER BY name LIMIT 3`,
+          `SELECT id, name FROM buildings WHERE name != '' ORDER BY name LIMIT 3`,
         );
         results = fallback.rows.map((b, i) => ({
           buildingId: b.id,

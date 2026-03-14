@@ -283,6 +283,8 @@ async function seed() {
         const name = tags.name ?? '';
         const levels = parseInt(tags['building:levels'] ?? '0');
         if (levels < city.minLevels) continue;
+        // Skip unnamed buildings — they can't be matched by vision
+        if (!name) continue;
 
         // Build address
         const street = tags['addr:street'] ?? '';
