@@ -4,8 +4,8 @@ import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { body, validationResult } from 'express-validator';
-import { MOCK_BUILDINGS } from '../data/mockData';
 import { createVisionService } from '../services/vision';
+import { getDb } from '../db/connection';
 import logger from '../services/logger';
 import { requireAuth } from '../middleware/auth';
 import { supabaseAdmin, supabaseEnabled } from '../services/supabase';
@@ -106,38 +106,46 @@ analyzeRouter.post(
       // Clean up local file after analysis
       fs.promises.unlink(req.file.path).catch((err) => logger.warn(err, `Failed to delete uploaded file ${req.file?.path}`));
 
-      // Cross-reference detected landmarks against known buildings
-      const detectedBuildings = visionResult.landmarks
-        .map((landmark, idx) => {
-          const match = MOCK_BUILDINGS.find(
-            (b) => b.name.toLowerCase() === landmark.name.toLowerCase(),
-          );
-          return match
-            ? {
-                buildingId: match.id,
-                name: match.name,
-                confidence: landmark.confidence,
-                boundingBox: landmark.boundingBox ?? {
-                  x: 80 + idx * 120,
-                  y: 40,
-                  width: 70,
-                  height: 250,
-                },
-              }
-            : null;
-        })
-        .filter(Boolean);
+      // Cross-reference detected landmarks against database buildings
+      const db = await getDb();
+      const detectedBuildings = [];
 
-      // Fallback: if no landmark matches, return top buildings as mock results
-      const results =
-        detectedBuildings.length > 0
-          ? detectedBuildings
-          : MOCK_BUILDINGS.slice(0, 3).map((b, i) => ({
-              buildingId: b.id,
-              name: b.name,
-              confidence: parseFloat((0.95 - i * 0.04).toFixed(2)),
-              boundingBox: { x: 80 + i * 120, y: 40, width: 60 + i * 10, height: 280 - i * 30 },
-            }));
+      for (let idx = 0; idx < visionResult.landmarks.length; idx++) {
+        const landmark = visionResult.landmarks[idx];
+        // Search by name (case-insensitive, partial match)
+        const result = await db.query<{ id: string; name: string }>(
+          `SELECT id, name FROM buildings WHERE LOWER(name) LIKE $1 ORDER BY name LIMIT 1`,
+          [`%${landmark.name.toLowerCase()}%`],
+        );
+        const match = result.rows[0];
+        if (match) {
+          detectedBuildings.push({
+            buildingId: match.id,
+            name: match.name,
+            confidence: landmark.confidence,
+            boundingBox: landmark.boundingBox ?? {
+              x: 80 + idx * 120,
+              y: 40,
+              width: 70,
+              height: 250,
+            },
+          });
+        }
+      }
+
+      // Fallback: if no landmark matches, return top 3 buildings from DB
+      let results = detectedBuildings;
+      if (results.length === 0) {
+        const fallback = await db.query<{ id: string; name: string }>(
+          `SELECT id, name FROM buildings ORDER BY name LIMIT 3`,
+        );
+        results = fallback.rows.map((b, i) => ({
+          buildingId: b.id,
+          name: b.name,
+          confidence: parseFloat((0.95 - i * 0.04).toFixed(2)),
+          boundingBox: { x: 80 + i * 120, y: 40, width: 60 + i * 10, height: 280 - i * 30 },
+        }));
+      }
 
       res.json({
         analysisId: `ana_${uuidv4().split('-')[0]}`,
