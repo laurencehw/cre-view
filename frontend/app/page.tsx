@@ -58,6 +58,19 @@ export default function HomePage() {
       const formData = new FormData();
       formData.append('image', file);
 
+      // Send user's geolocation if available for better building matching
+      if ('geolocation' in navigator) {
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 }),
+          );
+          formData.append('latitude', String(pos.coords.latitude));
+          formData.append('longitude', String(pos.coords.longitude));
+        } catch {
+          // Geolocation unavailable or denied — continue without it
+        }
+      }
+
       const res = await fetch(`${apiUrl}/api/analyze-skyline`, {
         method: 'POST',
         headers: authHeaders(),

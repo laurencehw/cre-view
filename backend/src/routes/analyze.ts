@@ -111,27 +111,31 @@ analyzeRouter.post(
       const detectedBuildings = [];
       const detectedCity = visionResult.city ?? '';
 
+      // Use geolocation if provided, or infer city from vision
+      const userLat = req.body.latitude ? parseFloat(req.body.latitude) : null;
+      const userLon = req.body.longitude ? parseFloat(req.body.longitude) : null;
+
       for (let idx = 0; idx < visionResult.landmarks.length; idx++) {
         const landmark = visionResult.landmarks[idx];
         const namePattern = `%${landmark.name.toLowerCase()}%`;
 
-        // If we know the city, prefer buildings in that city; otherwise match any
         let result;
-        if (detectedCity) {
-          // First try: match name AND city in address
+        if (userLat && userLon) {
+          // Best: use geolocation — match buildings near the user, sorted by distance
+          result = await db.query<{ id: string; name: string }>(
+            `SELECT id, name FROM buildings
+             WHERE name != '' AND LOWER(name) LIKE $1
+             ORDER BY ABS(latitude - $2) + ABS(longitude - $3) ASC LIMIT 1`,
+            [namePattern, userLat, userLon],
+          );
+        } else if (detectedCity) {
+          // Good: use vision-detected city — only match buildings in that city
           result = await db.query<{ id: string; name: string }>(
             `SELECT id, name FROM buildings
              WHERE name != '' AND LOWER(name) LIKE $1 AND LOWER(address) LIKE $2
              ORDER BY name LIMIT 1`,
             [namePattern, `%${detectedCity.toLowerCase()}%`],
           );
-          // Fallback: match name only if no city-specific match
-          if (result.rows.length === 0) {
-            result = await db.query<{ id: string; name: string }>(
-              `SELECT id, name FROM buildings WHERE name != '' AND LOWER(name) LIKE $1 ORDER BY name LIMIT 1`,
-              [namePattern],
-            );
-          }
         } else {
           result = await db.query<{ id: string; name: string }>(
             `SELECT id, name FROM buildings WHERE name != '' AND LOWER(name) LIKE $1 ORDER BY name LIMIT 1`,
@@ -155,12 +159,27 @@ analyzeRouter.post(
         }
       }
 
-      // Fallback: if no landmark matches, return top 3 buildings from DB
+      // Fallback: if no landmark matches, return nearby or city-filtered buildings
       let results = detectedBuildings;
       if (results.length === 0) {
-        const fallback = await db.query<{ id: string; name: string }>(
-          `SELECT id, name FROM buildings WHERE name != '' ORDER BY name LIMIT 3`,
-        );
+        let fallback;
+        if (userLat && userLon) {
+          fallback = await db.query<{ id: string; name: string }>(
+            `SELECT id, name FROM buildings WHERE name != ''
+             ORDER BY ABS(latitude - $1) + ABS(longitude - $2) ASC LIMIT 3`,
+            [userLat, userLon],
+          );
+        } else if (detectedCity) {
+          fallback = await db.query<{ id: string; name: string }>(
+            `SELECT id, name FROM buildings WHERE name != '' AND LOWER(address) LIKE $1
+             ORDER BY name LIMIT 3`,
+            [`%${detectedCity.toLowerCase()}%`],
+          );
+        } else {
+          fallback = await db.query<{ id: string; name: string }>(
+            `SELECT id, name FROM buildings WHERE name != '' ORDER BY name LIMIT 3`,
+          );
+        }
         results = fallback.rows.map((b, i) => ({
           buildingId: b.id,
           name: b.name,
