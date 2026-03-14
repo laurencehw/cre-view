@@ -8,11 +8,11 @@ Live at: https://creview-app.onrender.com/
 ## Architecture
 - **Frontend**: Next.js 14 (App Router) + React 18 + Tailwind CSS, port 3000
 - **Backend**: Express 4 + TypeScript, port 4000
-- **Database**: Supabase PostgreSQL (349 real buildings across 4 cities)
+- **Database**: Supabase PostgreSQL (475 buildings across 7+ cities)
 - **Auth**: Supabase Auth + custom JWT fallback
-- **Vision**: Pluggable provider pattern — OpenAI GPT-4o (active), mock, Azure/GCP stubs
+- **Vision**: Pluggable provider pattern — OpenAI GPT-4o (active, city-aware), mock, Azure/GCP stubs
 - **Monorepo**: npm workspaces (root `package.json`)
-- **Data sources**: NYC Open Data PLUTO API (live), OpenStreetMap Overpass API (seed)
+- **Data sources**: NYC PLUTO API (live), OpenStreetMap Overpass (seed), SEC EDGAR REIT 10-Ks (seed)
 
 ## Key Commands
 ```bash
@@ -27,6 +27,12 @@ npm run type-check --workspace=frontend  # TypeScript check
 # Seed scripts (run from project root)
 npx ts-node backend/src/db/seed-from-pluto.ts    # Seed NYC buildings from PLUTO API
 npx ts-node backend/src/db/seed-multi-city.ts     # Add Chicago, LA, SF via Overpass
+
+# REIT data pipeline (requires edgartools + Gemini)
+python backend/scripts/extract_reit_properties.py  # Download 10-K Item 2 text
+python backend/scripts/parse_reit_with_gemini.py    # Parse with Gemini → JSON
+python backend/scripts/seed_reit_data.py            # Generate Node seed script
+node backend/scripts/reit_data/_seed_reit.js        # Seed REIT data into DB
 ```
 
 ## Key Files
@@ -44,6 +50,9 @@ npx ts-node backend/src/db/seed-multi-city.ts     # Add Chicago, LA, SF via Over
 - `backend/src/db/seed-from-pluto.ts` — NYC PLUTO seed script (69 Manhattan buildings)
 - `backend/src/db/seed-multi-city.ts` — Multi-city seed (Chicago, LA, SF via Overpass)
 - `backend/src/data/mockData.ts` — Mock data fallback (used when DB unavailable)
+- `backend/scripts/extract_reit_properties.py` — Pull Item 2 from REIT 10-Ks via edgartools
+- `backend/scripts/parse_reit_with_gemini.py` — Parse 10-K property tables with Gemini
+- `backend/scripts/seed_reit_data.py` — Generate Node.js DB seed script from parsed REIT data
 - `frontend/app/page.tsx` — Main page (state management, data fetching)
 - `frontend/components/FinancialPanel.tsx` — Debt table, cap table, KPIs
 - `frontend/lib/types.ts` — Shared TypeScript interfaces
@@ -72,17 +81,19 @@ All in `.env` at project root (gitignored). Key vars:
 - `GET /api/health` — Health check
 
 ## Current State
-- **Database**: Supabase PostgreSQL with 349 real buildings (NYC 69, LA 98, SF 91, Chicago 91)
-- **Data**: Real building characteristics from NYC PLUTO + OpenStreetMap; financials are generated (realistic but synthetic)
-- **Vision**: OpenAI GPT-4o active
+- **Database**: Supabase PostgreSQL with 475 buildings across NYC, LA, SF, Chicago, San Diego, Seattle, and more
+- **Data**: Real building characteristics from NYC PLUTO + OpenStreetMap + SEC EDGAR REIT 10-Ks
+- **Cap tables**: Real REIT ownership from 10-K filings for ~150 buildings; major iconic buildings hand-verified
+- **Vision**: OpenAI GPT-4o with city detection + geolocation-aware matching
 - **Auth**: Supabase Auth integrated (frontend + backend), JWT fallback for non-Supabase deployments
-- **Deployment**: Render (Express serves static frontend build — no CORS needed)
+- **Deployment**: Render (Express serves static frontend, Supabase Postgres via pooler)
 
 ## Roadmap
+- [ ] **More REITs**: Add BXP (Boston Properties ~50 buildings), DEI (Douglas Emmett ~40 LA), Hines, CBRE, Prologis. Re-run pipeline.
 - [ ] NYC Open Data live integration in frontend (search + import UI)
 - [ ] ACRIS mortgage data integration (real debt/lender info for NYC)
 - [ ] Cook County Assessor API for Chicago (dataset: csik-bsws — has NOI, cap rates)
 - [ ] DC CAMA integration (ArcGIS REST API — commercial property assessments)
 - [ ] More NYC boroughs (Brooklyn, Queens office/mixed-use buildings)
-- [ ] REIT/CMBS parsing for actual NOI, cap rates from SEC filings
 - [ ] Building image URLs from street view APIs
+- [ ] Frontend building search/browse page
