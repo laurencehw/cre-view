@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "CRE View web application",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,6 +15,7 @@
     "test": "jest --passWithNoTests"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.99.1",
     "next": "^14.2.35",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

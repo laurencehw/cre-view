@@ -16,7 +16,9 @@ const app = express();
 const PORT = process.env.PORT ?? 4000;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use(cors());
+// CORS: use CORS_ORIGIN env var if set, otherwise default to localhost:3000 in dev
+const corsOrigin = process.env.CORS_ORIGIN ?? (process.env.NODE_ENV === 'production' ? undefined : 'http://localhost:3000');
+app.use(cors(corsOrigin ? { origin: corsOrigin, credentials: true } : { origin: false }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(pinoHttp({ logger }));

@@ -201,10 +201,18 @@ export default function HomePage() {
 
   return (
     <main className="flex flex-col min-h-screen">
+      {/* Skip to content link for keyboard / screen reader users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-brand-600 focus:text-white focus:rounded-lg"
+      >
+        Skip to main content
+      </a>
+
       {/* Header */}
       <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">🏙️</span>
+          <span className="text-2xl" aria-hidden="true">🏙️</span>
           <div>
             <h1 className="text-xl font-bold tracking-tight">CRE View</h1>
             <p className="text-xs text-gray-400">Skyline Financial Intelligence</p>
@@ -213,9 +221,9 @@ export default function HomePage() {
         <AuthPanel />
       </header>
 
-      <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
+      <div id="main-content" className="flex flex-1 flex-col lg:flex-row overflow-hidden">
         {/* Left panel — upload */}
-        <section className="w-full lg:w-96 border-b lg:border-b-0 lg:border-r border-gray-800 p-6 flex flex-col gap-6">
+        <section aria-label="Skyline capture and building list" className="w-full lg:w-96 border-b lg:border-b-0 lg:border-r border-gray-800 p-6 flex flex-col gap-6 overflow-auto">
           <div>
             <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
               Capture Skyline
@@ -231,14 +239,14 @@ export default function HomePage() {
           </div>
 
           {error && (
-            <div className="rounded-lg bg-red-900/30 border border-red-800 p-4 text-sm text-red-300">
+            <div role="alert" className="rounded-lg bg-red-900/30 border border-red-800 p-4 text-sm text-red-300">
               {error}
             </div>
           )}
 
           {isAnalyzing && (
-            <div className="flex items-center gap-3 text-sm text-gray-400">
-              <span className="animate-spin">⏳</span>
+            <div role="status" aria-label="Analyzing skyline" className="flex items-center gap-3 text-sm text-gray-400">
+              <span className="animate-spin" aria-hidden="true">⏳</span>
               Analyzing skyline…
             </div>
           )}
@@ -291,7 +299,7 @@ export default function HomePage() {
         </section>
 
         {/* Right panel — financial detail */}
-        <section className="flex-1 overflow-auto">
+        <section aria-label="Financial details" className="flex-1 overflow-auto">
           {selectedBuilding && financials ? (
             <div>
               <FinancialPanel building={selectedBuilding} financials={financials} details={buildingDetails} />
@@ -309,13 +317,31 @@ export default function HomePage() {
             </div>
           ) : selectedBuilding && financialError ? (
             <div className="flex items-center justify-center h-full p-8">
-              <div className="rounded-lg bg-red-900/30 border border-red-800 p-4 text-sm text-red-300 max-w-sm text-center">
+              <div role="alert" className="rounded-lg bg-red-900/30 border border-red-800 p-4 text-sm text-red-300 max-w-sm text-center">
                 {financialError}
               </div>
             </div>
           ) : selectedBuilding && isLoadingFinancials ? (
-            <div className="flex items-center justify-center h-full text-gray-500">
-              Loading financial data…
+            <div role="status" aria-label="Loading financial data" className="p-6 max-w-3xl mx-auto">
+              {/* Skeleton loader */}
+              <div className="animate-pulse">
+                <div className="h-8 w-64 bg-gray-800 rounded mb-4" />
+                <div className="h-4 w-48 bg-gray-800/60 rounded mb-8" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="rounded-xl bg-gray-900/60 border border-gray-800 p-4">
+                      <div className="h-3 w-16 bg-gray-800 rounded mb-2" />
+                      <div className="h-6 w-20 bg-gray-800 rounded" />
+                    </div>
+                  ))}
+                </div>
+                <div className="h-4 w-32 bg-gray-800 rounded mb-3" />
+                <div className="rounded-xl border border-gray-800 p-4 space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-4 bg-gray-800/60 rounded" />
+                  ))}
+                </div>
+              </div>
             </div>
           ) : detectedBuildings.length > 0 && allBuildingDetails.length > 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-6 p-8">

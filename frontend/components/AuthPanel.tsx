@@ -4,14 +4,12 @@ import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
 
 export default function AuthPanel() {
-  const { login, isAuthenticated, user, logout } = useAuth();
+  const { login, register, isAuthenticated, user, logout, isSupabase } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
   if (isAuthenticated) {
     return (
@@ -35,23 +33,15 @@ export default function AuthPanel() {
 
     try {
       if (mode === 'register') {
-        let res: Response;
-        try {
-          res = await fetch(`${apiUrl}/api/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-          });
-        } catch (fetchErr) {
-          throw new Error(`Network error reaching API (${apiUrl}). Check CORS_ORIGIN on the server.`);
+        await register(email, password);
+        // Supabase auto-logs-in after register; custom auth also stores the token.
+        // For custom auth, we still need to call login to match the original flow.
+        if (!isSupabase) {
+          await login(email, password);
         }
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error ?? 'Registration failed');
-        }
-        // After successful registration, log in
+      } else {
+        await login(email, password);
       }
-      await login(email, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {

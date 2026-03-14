@@ -8,6 +8,7 @@ import { MOCK_BUILDINGS } from '../data/mockData';
 import { createVisionService } from '../services/vision';
 import logger from '../services/logger';
 import { requireAuth } from '../middleware/auth';
+import { supabaseAdmin, supabaseEnabled } from '../services/supabase';
 
 export const analyzeRouter = Router();
 
@@ -87,7 +88,22 @@ analyzeRouter.post(
       const imageBuffer = await fs.promises.readFile(req.file.path);
       const visionResult = await visionService.analyze(imageBuffer, req.file.mimetype);
 
-      // Clean up uploaded file after analysis
+      // Optionally persist the image to Supabase Storage
+      if (supabaseEnabled && supabaseAdmin) {
+        const storagePath = `skylines/${uuidv4()}${path.extname(req.file.originalname).toLowerCase()}`;
+        supabaseAdmin.storage
+          .from('skyline-uploads')
+          .upload(storagePath, imageBuffer, { contentType: req.file.mimetype })
+          .then(({ error }) => {
+            if (error) logger.warn({ error }, 'Failed to upload to Supabase Storage');
+            else logger.info({ storagePath }, 'Image uploaded to Supabase Storage');
+          })
+          .catch((err) => {
+            logger.warn({ err }, 'Supabase Storage upload rejected');
+          });
+      }
+
+      // Clean up local file after analysis
       fs.promises.unlink(req.file.path).catch((err) => logger.warn(err, `Failed to delete uploaded file ${req.file?.path}`));
 
       // Cross-reference detected landmarks against known buildings

@@ -122,6 +122,149 @@ describe('POST /api/analyze-skyline', () => {
     expect(res.status).toBe(401);
     expect(res.body.code).toBe('UNAUTHORIZED');
   });
+
+  it('returns 400 when no image is attached', async () => {
+    const res = await request(app)
+      .post('/api/analyze-skyline')
+      .set('Authorization', `Bearer ${authToken}`);
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('FILE_REQUIRED');
+  });
+
+  it('returns detected buildings when image is attached', async () => {
+    // Create a minimal valid JPEG (smallest possible: 2 bytes SOI marker)
+    // The mock vision provider doesn't actually read the image, so a tiny buffer works.
+    const fakeJpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
+    const res = await request(app)
+      .post('/api/analyze-skyline')
+      .set('Authorization', `Bearer ${authToken}`)
+      .attach('image', fakeJpeg, { filename: 'skyline.jpg', contentType: 'image/jpeg' });
+    expect(res.status).toBe(200);
+    expect(res.body.analysisId).toBeDefined();
+    expect(Array.isArray(res.body.detectedBuildings)).toBe(true);
+    expect(res.body.detectedBuildings.length).toBeGreaterThan(0);
+    expect(res.body.detectedBuildings[0]).toHaveProperty('buildingId');
+    expect(res.body.detectedBuildings[0]).toHaveProperty('name');
+    expect(res.body.detectedBuildings[0]).toHaveProperty('confidence');
+    expect(res.body.processedAt).toBeDefined();
+  });
+});
+
+describe('POST /api/auth/register', () => {
+  const uniqueEmail = `testuser_${Date.now()}@example.com`;
+
+  it('registers a new user and returns a token', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({ email: uniqueEmail, password: 'securepass123' });
+    expect(res.status).toBe(201);
+    expect(res.body.token).toBeDefined();
+    expect(res.body.user.email).toBe(uniqueEmail);
+    expect(res.body.user.role).toBe('user');
+  });
+
+  it('returns 409 for duplicate email', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({ email: uniqueEmail, password: 'anotherpass' });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('CONFLICT');
+  });
+
+  it('returns 400 for invalid email', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({ email: 'not-an-email', password: 'securepass123' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 for short password', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({ email: 'short@example.com', password: '123' });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /api/auth/login', () => {
+  const loginEmail = `logintest_${Date.now()}@example.com`;
+  const loginPass = 'mypassword456';
+
+  beforeAll(async () => {
+    await request(app)
+      .post('/api/auth/register')
+      .send({ email: loginEmail, password: loginPass });
+  });
+
+  it('logs in with correct credentials', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: loginEmail, password: loginPass });
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeDefined();
+    expect(res.body.user.email).toBe(loginEmail);
+  });
+
+  it('returns 401 for wrong password', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: loginEmail, password: 'wrongpassword' });
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('UNAUTHORIZED');
+  });
+
+  it('returns 401 for nonexistent user', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'ghost@example.com', password: 'anything' });
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('UNAUTHORIZED');
+  });
+
+  it('returns 400 for missing fields', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: loginEmail });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /api/auth/refresh', () => {
+  it('returns a valid token', async () => {
+    const res = await request(app)
+      .post('/api/auth/refresh')
+      .set('Authorization', `Bearer ${authToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeDefined();
+    // Verify the refreshed token is a valid JWT (3 dot-separated parts)
+    expect(res.body.token.split('.').length).toBe(3);
+  });
+
+  it('returns 401 without auth token', async () => {
+    const res = await request(app).post('/api/auth/refresh');
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('UNAUTHORIZED');
+  });
+});
+
+describe('Cache-Control headers', () => {
+  it('sets cache headers on building list', async () => {
+    const res = await request(app).get('/api/buildings');
+    expect(res.headers['cache-control']).toMatch(/max-age=300/);
+  });
+
+  it('sets cache headers on building details', async () => {
+    const res = await request(app).get('/api/buildings/bld_001');
+    expect(res.headers['cache-control']).toMatch(/max-age=600/);
+  });
+
+  it('sets private cache headers on financials', async () => {
+    const res = await request(app)
+      .get('/api/buildings/bld_001/financials')
+      .set('Authorization', `Bearer ${authToken}`);
+    expect(res.headers['cache-control']).toMatch(/private/);
+    expect(res.headers['cache-control']).toMatch(/max-age=300/);
+  });
 });
 
 describe('GET /api/404', () => {

@@ -28,6 +28,8 @@ buildingsRouter.get(
         search: req.query.search as string | undefined,
       });
 
+      // Building list changes infrequently — cache for 5 minutes
+      res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
       res.json(result);
     } catch (err) {
       next(err);
@@ -54,6 +56,8 @@ buildingsRouter.get(
         return;
       }
 
+      // Individual building details are stable — cache for 10 minutes
+      res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=60');
       res.json(building);
     } catch (err) {
       next(err);
@@ -86,6 +90,8 @@ buildingsRouter.get(
         return;
       }
 
+      // Financial data is per-user (requires auth) — private cache for 5 minutes
+      res.setHeader('Cache-Control', 'private, max-age=300, stale-while-revalidate=60');
       res.json(financials);
     } catch (err) {
       next(err);
@@ -155,7 +161,15 @@ buildingsRouter.get(
         ]);
       }
 
-      const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
+      // Sanitize cell values to prevent CSV injection: prefix dangerous leading
+      // characters (=, +, -, @, \t, \r) with a single quote so spreadsheet apps
+      // treat them as text rather than formulas.
+      const sanitizeCell = (c: string): string => {
+        let safe = c.replace(/"/g, '""');
+        if (/^[=+\-@\t\r]/.test(safe)) safe = `'${safe}`;
+        return `"${safe}"`;
+      };
+      const csv = rows.map((r) => r.map(sanitizeCell).join(',')).join('\n');
       const filename = `${building.name.replace(/[^a-zA-Z0-9]/g, '_')}_financials.csv`;
 
       res.setHeader('Content-Type', 'text/csv');

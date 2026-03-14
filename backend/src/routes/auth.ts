@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import crypto from 'crypto';
-import { signToken } from '../middleware/auth';
+import { signToken, requireAuth } from '../middleware/auth';
 import { getDb } from '../db/connection';
 import logger from '../services/logger';
+import { supabaseEnabled } from '../services/supabase';
 
 export const authRouter = Router();
 
@@ -101,5 +102,23 @@ authRouter.post(
     const token = signToken({ sub: user.id, email: user.email, role: user.role });
     logger.info({ userId: user.id }, 'User logged in');
     res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+  },
+);
+
+// ─── POST /api/auth/refresh ──────────────────────────────────────────────────
+// Issues a fresh token if the current one is still valid.
+// The frontend calls this proactively before the token expires.
+authRouter.post(
+  '/auth/refresh',
+  requireAuth,
+  (req: Request, res: Response) => {
+    // In Supabase mode, token refresh is handled client-side by the Supabase SDK.
+    if (supabaseEnabled) {
+      res.status(501).json({ error: 'Token refresh is managed by Supabase', code: 'NOT_IMPLEMENTED' });
+      return;
+    }
+    const user = req.user!;
+    const token = signToken({ sub: user.sub, email: user.email, role: user.role });
+    res.json({ token });
   },
 );

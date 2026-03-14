@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { DetectedBuilding, Building, BuildingFinancials } from '@/lib/types';
 import { formatCurrency, formatPercent } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
@@ -22,8 +23,10 @@ function StatCard({ label, value }: { label: string; value: string }) {
 function ExportButton({ buildingId, buildingName }: { buildingId: string; buildingName: string }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
   const { authHeaders } = useAuth();
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const handleExport = async () => {
+    setExportError(null);
     try {
       const res = await fetch(`${apiUrl}/api/buildings/${buildingId}/financials/export`, {
         headers: authHeaders(),
@@ -36,19 +39,25 @@ function ExportButton({ buildingId, buildingName }: { buildingId: string; buildi
       link.download = `${buildingName.replace(/[^a-zA-Z0-9]/g, '_')}_financials.csv`;
       link.click();
       URL.revokeObjectURL(url);
-    } catch {
-      // Silently fail — user will see the button didn't work
+    } catch (err) {
+      console.error('CSV export failed:', err);
+      setExportError(err instanceof Error ? err.message : 'Export failed');
     }
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleExport}
-      className="text-xs px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-    >
-      Export CSV
-    </button>
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={handleExport}
+        className="text-xs px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+      >
+        Export CSV
+      </button>
+      {exportError && (
+        <span className="text-xs text-red-400">{exportError}</span>
+      )}
+    </div>
   );
 }
 
@@ -99,8 +108,8 @@ export default function FinancialPanel({ building, financials, details }: Financ
         <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
           Debt Structure
         </h3>
-        <div className="rounded-xl border border-gray-800 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="rounded-xl border border-gray-800 overflow-x-auto">
+          <table className="w-full text-sm min-w-[480px]">
             <thead>
               <tr className="border-b border-gray-800 bg-gray-900/60">
                 <th className="text-left p-3 text-gray-500 font-medium">Tranche</th>
@@ -142,8 +151,8 @@ export default function FinancialPanel({ building, financials, details }: Financ
         <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
           Cap Table — {formatCurrency(equity.totalEquity, true)} Total Equity
         </h3>
-        <div className="rounded-xl border border-gray-800 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="rounded-xl border border-gray-800 overflow-x-auto">
+          <table className="w-full text-sm min-w-[400px]">
             <thead>
               <tr className="border-b border-gray-800 bg-gray-900/60">
                 <th className="text-left p-3 text-gray-500 font-medium">Investor</th>

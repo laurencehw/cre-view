@@ -3,16 +3,20 @@
   "version": "0.1.0",
   "description": "CRE View API server",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "jest --forceExit",
+    "test": "NODE_ENV=test jest --forceExit",
     "lint": "eslint 'src/**/*.ts'",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.99.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
