@@ -185,7 +185,7 @@ export async function getFinancialsByBuildingId(buildingId: string): Promise<Bui
 
   const financials: BuildingFinancials = {
     buildingId,
-    asOfDate: String(fin.as_of_date),
+    asOfDate: fin.as_of_date instanceof Date ? fin.as_of_date.toISOString().split('T')[0] : String(fin.as_of_date),
     valuation: {
       estimatedValue: Number(fin.estimated_value),
       currency: fin.currency,
@@ -198,14 +198,14 @@ export async function getFinancialsByBuildingId(buildingId: string): Promise<Bui
         amount: Number(fin.senior_loan_amount),
         lender: fin.senior_loan_lender,
         interestRate: Number(fin.senior_loan_rate),
-        maturityDate: String(fin.senior_loan_maturity),
+        maturityDate: fin.senior_loan_maturity instanceof Date ? fin.senior_loan_maturity.toISOString().split('T')[0] : String(fin.senior_loan_maturity),
       },
       ...(fin.mezz_amount != null && {
         mezz: {
           amount: Number(fin.mezz_amount),
           lender: fin.mezz_lender!,
           interestRate: Number(fin.mezz_rate),
-          maturityDate: String(fin.mezz_maturity),
+          maturityDate: fin.mezz_maturity instanceof Date ? fin.mezz_maturity.toISOString().split('T')[0] : String(fin.mezz_maturity),
         },
       }),
     },

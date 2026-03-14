@@ -146,6 +146,11 @@ const KNOWN_NAMES: Record<string, string> = {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+/** Escape a string value for safe interpolation into SoQL WHERE clauses. */
+function soqlEscape(s: string): string {
+  return s.replace(/'/g, "''").replace(/[\\;]/g, '');
+}
+
 function titleCase(s: string): string {
   return s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -245,7 +250,7 @@ export async function searchPluto(opts: PlutoSearchOptions): Promise<PlutoBuildi
   }
 
   if (opts.address) {
-    conditions.push(`upper(address) LIKE '%${opts.address.toUpperCase().replace(/'/g, "''")}%'`);
+    conditions.push(`upper(address) LIKE '%${soqlEscape(opts.address.toUpperCase())}%'`);
   }
 
   if (opts.minFloors) {
@@ -256,9 +261,9 @@ export async function searchPluto(opts: PlutoSearchOptions): Promise<PlutoBuildi
     const cls = opts.buildingClass.toUpperCase();
     if (cls.length === 1) {
       // Match all subclasses (e.g. O → O1, O2, O3, O4, O5, O6)
-      conditions.push(`bldgclass LIKE '${cls}%'`);
+      conditions.push(`bldgclass LIKE '${soqlEscape(cls)}%'`);
     } else {
-      conditions.push(`bldgclass='${cls}'`);
+      conditions.push(`bldgclass='${soqlEscape(cls)}'`);
     }
   }
 
@@ -337,11 +342,11 @@ export async function searchAcris(opts: AcrisSearchOptions): Promise<AcrisTransa
   if (docIds.length === 0) return [];
 
   // Step 2: Fetch master records for these documents
-  const docIdList = docIds.slice(0, 100).map((id) => `'${id}'`).join(',');
+  const docIdList = docIds.slice(0, 100).map((id) => `'${soqlEscape(id)}'`).join(',');
   const masterConditions = [`document_id IN (${docIdList})`];
 
   if (opts.documentType) {
-    masterConditions.push(`doc_type='${opts.documentType}'`);
+    masterConditions.push(`doc_type='${soqlEscape(opts.documentType)}'`);
   }
   if (opts.minAmount) {
     masterConditions.push(`document_amt >= ${opts.minAmount}`);

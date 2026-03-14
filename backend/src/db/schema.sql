@@ -37,10 +37,10 @@ CREATE TABLE IF NOT EXISTS financials (
     as_of_date       DATE        NOT NULL,
 
     -- Valuation
-    estimated_value  BIGINT,                     -- USD cents
+    estimated_value  BIGINT,                     -- USD whole dollars
     currency         CHAR(3)     NOT NULL DEFAULT 'USD',
     cap_rate         NUMERIC(6, 4),
-    noi              BIGINT,                     -- USD cents
+    noi              BIGINT,                     -- USD whole dollars
 
     -- Debt
     total_debt       BIGINT,
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS cap_table_entries (
     financial_id     UUID        NOT NULL REFERENCES financials(id) ON DELETE CASCADE,
     investor         TEXT        NOT NULL,
     ownership        NUMERIC(5, 4) NOT NULL CHECK (ownership BETWEEN 0 AND 1),
-    amount           BIGINT      NOT NULL,       -- USD cents
+    amount           BIGINT      NOT NULL,       -- USD whole dollars
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
