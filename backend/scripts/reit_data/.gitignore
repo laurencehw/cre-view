@@ -1,0 +1,5 @@
+# Raw 10-K text and intermediate files (large, regenerable)
+*_item2.txt
+*_10k_text.txt
+*_gemini_raw.txt
+_seed_reit.js

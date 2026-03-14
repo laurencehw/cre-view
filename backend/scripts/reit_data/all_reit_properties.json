@@ -1,0 +1,228 @@
+{
+  "ESRT": {
+    "reit": "Empire State Realty Trust",
+    "focus": "NYC",
+    "filing_date": null,
+    "properties": [
+      {
+        "name": "LinkedInEmpire State Building",
+        "submarket": "Feb.",
+        "city": "New York",
+        "state": "NY",
+        "owner": "Empire State Realty Trust",
+        "sqft": 2026,
+        "occupancy": 3.66,
+        "annual_rent": null
+      },
+      {
+        "name": "The following tables set forth a summary schedule of expirations for leases in place",
+        "submarket": "as of December",
+        "city": "New York",
+        "state": "NY",
+        "owner": "Empire State Realty Trust",
+        "sqft": 31,
+        "occupancy": null,
+        "annual_rent": null
+      }
+    ]
+  },
+  "SLG": {
+    "reit": "SL Green Realty",
+    "focus": "Manhattan office",
+    "filing_date": null,
+    "properties": [
+      {
+        "name": "1515 Broadway",
+        "submarket": "March",
+        "city": "New York",
+        "state": "NY",
+        "owner": "SL Green Realty",
+        "sqft": 20289106,
+        "occupancy": null,
+        "annual_rent": null
+      },
+      {
+        "name": "919 Third Avenue",
+        "submarket": "June",
+        "city": "New York",
+        "state": "NY",
+        "owner": "SL Green Realty",
+        "sqft": 2036281651,
+        "occupancy": null,
+        "annual_rent": null
+      },
+      {
+        "name": "420 Lexington Avenue",
+        "submarket": "October",
+        "city": "New York",
+        "state": "NY",
+        "owner": "SL Green Realty",
+        "sqft": 202610043,
+        "occupancy": null,
+        "annual_rent": null
+      },
+      {
+        "name": "Metro-North Commuter Railroad",
+        "submarket": "Company420 Lexington AvenueNovember",
+        "city": "New York",
+        "state": "NY",
+        "owner": "SL Green Realty",
+        "sqft": 2034344873,
+        "occupancy": null,
+        "annual_rent": 22097.0
+      },
+      {
+        "name": "11 Madison Avenue",
+        "submarket": "September",
+        "city": "New York",
+        "state": "NY",
+        "owner": "SL Green Realty",
+        "sqft": 2030104618,
+        "occupancy": null,
+        "annual_rent": null
+      },
+      {
+        "name": "Franklin Templeton Companies LLCOne Madison Avenue",
+        "submarket": "May",
+        "city": "New York",
+        "state": "NY",
+        "owner": "SL Green Realty",
+        "sqft": 2040354976,
+        "occupancy": null,
+        "annual_rent": 48970.0
+      },
+      {
+        "name": "280 Park Avenue",
+        "submarket": "November",
+        "city": "New York",
+        "state": "NY",
+        "owner": "SL Green Realty",
+        "sqft": 2031128993,
+        "occupancy": null,
+        "annual_rent": null
+      },
+      {
+        "name": "TD Bank US Holding CompanyOne Vanderbilt Avenue",
+        "submarket": "July",
+        "city": "New York",
+        "state": "NY",
+        "owner": "SL Green Realty",
+        "sqft": 2041193159,
+        "occupancy": null,
+        "annual_rent": 26196.0
+      },
+      {
+        "name": "One Vanderbilt Avenue",
+        "submarket": "August",
+        "city": "New York",
+        "state": "NY",
+        "owner": "SL Green Realty",
+        "sqft": 20416843,
+        "occupancy": null,
+        "annual_rent": null
+      },
+      {
+        "name": "125 Park Avenue",
+        "submarket": "October",
+        "city": "New York",
+        "state": "NY",
+        "owner": "SL Green Realty",
+        "sqft": 203026536,
+        "occupancy": null,
+        "annual_rent": null
+      },
+      {
+        "name": "Carlyle Investment Management LLCOne Vanderbilt Avenue",
+        "submarket": "September",
+        "city": "New York",
+        "state": "NY",
+        "owner": "SL Green Realty",
+        "sqft": 2036194702,
+        "occupancy": null,
+        "annual_rent": 34744.0
+      },
+      {
+        "name": "245 Park Avenue",
+        "submarket": "December",
+        "city": "New York",
+        "state": "NY",
+        "owner": "SL Green Realty",
+        "sqft": 202836316,
+        "occupancy": null,
+        "annual_rent": null
+      },
+      {
+        "name": "The Toronto Dominion BankOne Vanderbilt Avenue",
+        "submarket": "April",
+        "city": "New York",
+        "state": "NY",
+        "owner": "SL Green Realty",
+        "sqft": 2042142892,
+        "occupancy": null,
+        "annual_rent": 21330.0
+      },
+      {
+        "name": "Stone Ridge HoldingsOne Vanderbilt Avenue",
+        "submarket": "December",
+        "city": "New York",
+        "state": "NY",
+        "owner": "SL Green Realty",
+        "sqft": 203797652,
+        "occupancy": null,
+        "annual_rent": 23319.0
+      }
+    ]
+  },
+  "VNO": {
+    "reit": "Vornado Realty Trust",
+    "focus": "NYC/SF/Chicago",
+    "filing_date": null,
+    "properties": []
+  },
+  "BXP": {
+    "reit": "Boston Properties (BXP)",
+    "focus": "NYC/Boston/SF/DC",
+    "filing_date": null,
+    "properties": []
+  },
+  "PGRE": {
+    "reit": "Paramount Group",
+    "focus": "NYC/SF",
+    "filing_date": null,
+    "properties": [
+      {
+        "name": "The following table sets forth a summary schedule of lease expirations for leases in place",
+        "submarket": "as of December",
+        "city": "New York",
+        "state": "NY",
+        "owner": "Paramount Group",
+        "sqft": 31,
+        "occupancy": null,
+        "annual_rent": null
+      }
+    ]
+  },
+  "DEI": {
+    "reit": "Douglas Emmett",
+    "focus": "LA/Honolulu",
+    "filing_date": null,
+    "properties": []
+  },
+  "KRC": {
+    "reit": "Kilroy Realty",
+    "focus": "West Coast",
+    "filing_date": null,
+    "properties": [
+      {
+        "name": "Kilroy Oyster Point",
+        "submarket": "- Phase 2South San Francisco2Q 20211Q",
+        "city": "San Francisco",
+        "state": "CA",
+        "owner": "Kilroy Realty",
+        "sqft": 2026871738,
+        "occupancy": null,
+        "annual_rent": null
+      }
+    ]
+  }
+}

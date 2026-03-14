@@ -1,0 +1,27 @@
+{
+  "reit": "Empire State Realty Trust",
+  "focus": "NYC",
+  "filing_date": null,
+  "properties": [
+    {
+      "name": "LinkedInEmpire State Building",
+      "submarket": "Feb.",
+      "city": "New York",
+      "state": "NY",
+      "owner": "Empire State Realty Trust",
+      "sqft": 2026,
+      "occupancy": 3.66,
+      "annual_rent": null
+    },
+    {
+      "name": "The following tables set forth a summary schedule of expirations for leases in place",
+      "submarket": "as of December",
+      "city": "New York",
+      "state": "NY",
+      "owner": "Empire State Realty Trust",
+      "sqft": 31,
+      "occupancy": null,
+      "annual_rent": null
+    }
+  ]
+}

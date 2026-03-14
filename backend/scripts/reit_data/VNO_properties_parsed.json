@@ -1,0 +1,101 @@
+[
+  {
+    "name": "PENN 1",
+    "address": "1 Penn Plaza",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 2553000,
+    "occupancy": 0.889,
+    "annual_rent": 205535695,
+    "ownership_pct": 1.0,
+    "property_type": "Office"
+  },
+  {
+    "name": "1290 Avenue of the Americas",
+    "address": "1290 Avenue of the Americas",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 2089000,
+    "occupancy": 0.913,
+    "annual_rent": 172720186,
+    "ownership_pct": 0.7,
+    "property_type": "Office"
+  },
+  {
+    "name": "PENN 2",
+    "address": "2 Penn Plaza",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 1825000,
+    "occupancy": 0.795,
+    "annual_rent": 131391375,
+    "ownership_pct": 1.0,
+    "property_type": "Office"
+  },
+  {
+    "name": "909 Third Avenue",
+    "address": "909 Third Avenue",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 1353000,
+    "occupancy": 0.727,
+    "annual_rent": 89076804,
+    "ownership_pct": 1.0,
+    "property_type": "Office"
+  },
+  {
+    "name": "280 Park Avenue",
+    "address": "280 Park Avenue",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 1267000,
+    "occupancy": 0.953,
+    "annual_rent": 109346676,
+    "ownership_pct": 0.5,
+    "property_type": "Office"
+  },
+  {
+    "name": "Independence Plaza",
+    "address": "Tribeca",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 1258000,
+    "occupancy": 0.684,
+    "annual_rent": 76831782,
+    "ownership_pct": 0.501,
+    "property_type": "Mixed-Use"
+  },
+  {
+    "name": "770 Broadway",
+    "address": "770 Broadway",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 1183000,
+    "occupancy": 1.0,
+    "annual_rent": 107132480,
+    "ownership_pct": 1.0,
+    "property_type": "Office"
+  },
+  {
+    "name": "PENN 11",
+    "address": "11 Penn Plaza",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 1159000,
+    "occupancy": 0.979,
+    "annual_rent": 102755750,
+    "ownership_pct": 1.0,
+    "property_type": "Office"
+  },
+  {
+    "name": "100 West 33rd Street",
+    "address": "100 West 33rd Street",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 1115000,
+    "occupancy": 0.874,
+    "annual_rent": 67910211,
+    "ownership_pct": 1.0,
+    "property_type": "Office"
+  }
+]

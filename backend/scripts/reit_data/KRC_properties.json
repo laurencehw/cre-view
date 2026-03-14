@@ -1,0 +1,17 @@
+{
+  "reit": "Kilroy Realty",
+  "focus": "West Coast",
+  "filing_date": null,
+  "properties": [
+    {
+      "name": "Kilroy Oyster Point",
+      "submarket": "- Phase 2South San Francisco2Q 20211Q",
+      "city": "San Francisco",
+      "state": "CA",
+      "owner": "Kilroy Realty",
+      "sqft": 2026871738,
+      "occupancy": null,
+      "annual_rent": null
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+[
+  {
+    "name": "10 East 53rd Street",
+    "address": "Plaza District",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 354300,
+    "occupancy": 0.941,
+    "annual_rent": 32962000,
+    "ownership_pct": 1.0,
+    "property_type": "Office"
+  },
+  {
+    "name": "100 Church Street",
+    "address": "Downtown",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 1047500,
+    "occupancy": 0.931,
+    "annual_rent": 47345000,
+    "ownership_pct": 1.0,
+    "property_type": "Office"
+  },
+  {
+    "name": "110 Greene Street",
+    "address": "Soho",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 223600,
+    "occupancy": 0.927,
+    "annual_rent": 19409000,
+    "ownership_pct": 1.0,
+    "property_type": "Office"
+  },
+  {
+    "name": "125 Park Avenue",
+    "address": "Grand Central",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 604245,
+    "occupancy": 0.98,
+    "annual_rent": 47292000,
+    "ownership_pct": 1.0,
+    "property_type": "Office"
+  },
+  {
+    "name": "304 Park Avenue South",
+    "address": "Midtown South",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 215000,
+    "occupancy": 0.919,
+    "annual_rent": 18083000,
+    "ownership_pct": 1.0,
+    "property_type": "Office"
+  },
+  {
+    "name": "420 Lexington Avenue",
+    "address": "Grand Central North",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 1188000,
+    "occupancy": 0.905,
+    "annual_rent": 88882000,
+    "ownership_pct": 1.0,
+    "property_type": "Office"
+  },
+  {
+    "name": "461 Fifth Avenue",
+    "address": "Midtown",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 200000,
+    "occupancy": 0.85,
+    "annual_rent": 15100000,
+    "ownership_pct": 1.0,
+    "property_type": "Office"
+  },
+  {
+    "name": "485 Lexington Avenue",
+    "address": "Grand Central North",
+    "city": "New York",
+    "state": "NY",
+    "sqft": 921000,
+    "occupancy": 0.778,
+    "annual_rent": 48339000,
+    "ownership_pct": 1.0,
+    "property_type": "Office"
+  }
+]
