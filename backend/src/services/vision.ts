@@ -10,6 +10,7 @@ export interface DetectedLabel {
 export interface VisionResult {
   labels: DetectedLabel[];
   landmarks: DetectedLabel[];
+  city?: string;
 }
 
 // ─── Provider interface ───────────────────────────────────────────────────────
@@ -57,9 +58,11 @@ class OpenAIVisionProvider implements VisionProvider {
           role: 'system',
           content: `You are a building identification AI. Analyze the skyline image and return a JSON object with this exact structure:
 {
+  "city": "string (the city shown in the photo, e.g. 'New York', 'Chicago', 'Los Angeles', 'San Francisco')",
   "labels": [{ "name": "string", "confidence": 0.0-1.0, "boundingBox": { "x": number, "y": number, "width": number, "height": number } }],
   "landmarks": [{ "name": "string", "confidence": 0.0-1.0, "boundingBox": { "x": number, "y": number, "width": number, "height": number } }]
 }
+city: identify which city the skyline belongs to.
 labels: general scene labels (e.g. "skyscraper", "urban", "building").
 landmarks: specific named buildings you can identify. Include bounding box coordinates in pixel space relative to the image dimensions.
 Only include buildings you can identify with reasonable confidence.`,
@@ -82,6 +85,7 @@ Only include buildings you can identify with reasonable confidence.`,
 
     const parsed = JSON.parse(content) as VisionResult;
     return {
+      city: parsed.city ?? undefined,
       labels: Array.isArray(parsed.labels) ? parsed.labels : [],
       landmarks: Array.isArray(parsed.landmarks) ? parsed.landmarks : [],
     };

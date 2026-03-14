@@ -109,14 +109,36 @@ analyzeRouter.post(
       // Cross-reference detected landmarks against database buildings
       const db = await getDb();
       const detectedBuildings = [];
+      const detectedCity = visionResult.city ?? '';
 
       for (let idx = 0; idx < visionResult.landmarks.length; idx++) {
         const landmark = visionResult.landmarks[idx];
-        // Search by name (case-insensitive, partial match)
-        const result = await db.query<{ id: string; name: string }>(
-          `SELECT id, name FROM buildings WHERE LOWER(name) LIKE $1 ORDER BY name LIMIT 1`,
-          [`%${landmark.name.toLowerCase()}%`],
-        );
+        const namePattern = `%${landmark.name.toLowerCase()}%`;
+
+        // If we know the city, prefer buildings in that city; otherwise match any
+        let result;
+        if (detectedCity) {
+          // First try: match name AND city in address
+          result = await db.query<{ id: string; name: string }>(
+            `SELECT id, name FROM buildings
+             WHERE LOWER(name) LIKE $1 AND LOWER(address) LIKE $2
+             ORDER BY name LIMIT 1`,
+            [namePattern, `%${detectedCity.toLowerCase()}%`],
+          );
+          // Fallback: match name only if no city-specific match
+          if (result.rows.length === 0) {
+            result = await db.query<{ id: string; name: string }>(
+              `SELECT id, name FROM buildings WHERE LOWER(name) LIKE $1 ORDER BY name LIMIT 1`,
+              [namePattern],
+            );
+          }
+        } else {
+          result = await db.query<{ id: string; name: string }>(
+            `SELECT id, name FROM buildings WHERE LOWER(name) LIKE $1 ORDER BY name LIMIT 1`,
+            [namePattern],
+          );
+        }
+
         const match = result.rows[0];
         if (match) {
           detectedBuildings.push({
