@@ -36,16 +36,17 @@ node backend/scripts/reit_data/_seed_reit.js        # Seed REIT data into DB
 ```
 
 ## Key Files
-- `backend/src/index.ts` — Express entry point (loads .env from project root)
+- `backend/src/index.ts` — Express entry point (loads .env from project root, SPA fallback for client-side routing)
 - `backend/src/routes/analyze.ts` — POST /api/analyze-skyline (image upload + vision)
-- `backend/src/routes/buildings.ts` — Building CRUD + financials + CSV export
+- `backend/src/routes/buildings.ts` — Building CRUD + financials + comps + CSV export
+- `backend/src/routes/analytics.ts` — Market summary + portfolio aggregation endpoints
 - `backend/src/routes/nycData.ts` — NYC Open Data search + import endpoints
 - `backend/src/routes/auth.ts` — Supabase + JWT auth routes
 - `backend/src/services/nycOpenData.ts` — PLUTO + ACRIS query service
 - `backend/src/services/vision.ts` — Vision provider factory
 - `backend/src/services/supabase.ts` — Supabase admin/anon clients
 - `backend/src/db/connection.ts` — PostgreSQL connection (SSL for Supabase, mock fallback)
-- `backend/src/db/repositories.ts` — Data access layer (snake_case → camelCase mapping)
+- `backend/src/db/repositories.ts` — Data access layer (listBuildings with filters, comps, market summary, portfolios)
 - `backend/src/db/schema.sql` — PostgreSQL DDL
 - `backend/src/db/seed-from-pluto.ts` — NYC PLUTO seed script (69 Manhattan buildings)
 - `backend/src/db/seed-multi-city.ts` — Multi-city seed (Chicago, LA, SF via Overpass)
@@ -53,9 +54,20 @@ node backend/scripts/reit_data/_seed_reit.js        # Seed REIT data into DB
 - `backend/scripts/extract_reit_properties.py` — Pull Item 2 from REIT 10-Ks via edgartools
 - `backend/scripts/parse_reit_with_gemini.py` — Parse 10-K property tables with Gemini
 - `backend/scripts/seed_reit_data.py` — Generate Node.js DB seed script from parsed REIT data
-- `frontend/app/page.tsx` — Main page (state management, data fetching)
+- `frontend/app/page.tsx` — Home page (skyline analysis)
+- `frontend/app/buildings/page.tsx` — Building search + detail page (handles /buildings and /buildings/:id)
+- `frontend/app/analytics/page.tsx` — Market analytics dashboard
+- `frontend/components/NavBar.tsx` — Top navigation with client-side routing
+- `frontend/components/BuildingGrid.tsx` — Paginated grid of building summary cards
+- `frontend/components/BuildingSearchFilters.tsx` — Search + filter controls (city, type, floors, sort)
+- `frontend/components/BuildingDetailTabs.tsx` — Tabbed building detail (overview, financials, ownership, location)
+- `frontend/components/CompsTable.tsx` — Comparable buildings side-by-side table
+- `frontend/components/InteractiveMap.tsx` — Leaflet map with dark CARTO tiles and custom markers
+- `frontend/components/MarketCharts.tsx` — SVG bar/donut charts for analytics
+- `frontend/components/MortgageHistory.tsx` — ACRIS mortgage/deed history for NYC buildings
 - `frontend/components/FinancialPanel.tsx` — Debt table, cap table, KPIs
 - `frontend/lib/types.ts` — Shared TypeScript interfaces
+- `frontend/lib/api.ts` — PaginatedResult type
 - `frontend/lib/supabase.ts` — Frontend Supabase client
 - `frontend/lib/auth.tsx` — Auth context with Supabase + JWT fallback
 
@@ -69,10 +81,14 @@ All in `.env` at project root (gitignored). Key vars:
 - `NYC_OPEN_DATA_APP_TOKEN` — Optional, for higher rate limits on NYC API
 
 ## API Endpoints
-- `GET /api/buildings` — List all buildings (paginated, searchable)
+- `GET /api/buildings` — List buildings (paginated, search, city/type/floors filters, sort)
+- `GET /api/buildings/filters` — Distinct cities + property types for filter dropdowns
 - `GET /api/buildings/:id` — Building details
+- `GET /api/buildings/:id/comps` — Comparable buildings (same type ± 20% floors)
 - `GET /api/buildings/:id/financials` — Financial data (auth required)
 - `GET /api/buildings/:id/financials/export` — CSV export (auth required)
+- `GET /api/analytics/market-summary` — Aggregate stats by city and property type
+- `GET /api/analytics/portfolios` — Owner portfolios (2+ buildings, ranked by value)
 - `POST /api/analyze-skyline` — Upload image for building detection
 - `GET /api/nyc/pluto/search` — Live search NYC PLUTO data
 - `POST /api/nyc/import` — Import PLUTO buildings to DB (auth required)
@@ -86,14 +102,23 @@ All in `.env` at project root (gitignored). Key vars:
 - **Cap tables**: Real REIT ownership from 10-K filings for ~150 buildings; major iconic buildings hand-verified
 - **Vision**: OpenAI GPT-4o with city detection + geolocation-aware matching
 - **Auth**: Supabase Auth integrated (frontend + backend), JWT fallback for non-Supabase deployments
-- **Deployment**: Render (Express serves static frontend, Supabase Postgres via pooler)
+- **Navigation**: Multi-page SPA — Skyline (home), Buildings (search/detail), Analytics (dashboard)
+- **Search**: Full-text search + city/type/floor filters + sorting + pagination
+- **Building detail**: Tabbed view (overview, financials, ownership pie chart, location map)
+- **Comps**: Comparable buildings matched by type and floor count with financial comparison
+- **Interactive map**: Leaflet with dark CARTO tiles, custom markers, popups (on analytics + detail pages)
+- **Analytics**: Market summary by city/type, portfolio rankings, SVG charts
+- **ACRIS**: NYC mortgage/deed history auto-lookup on building detail pages
+- **Deployment**: Render (Express serves static frontend with SPA fallback, Supabase Postgres via pooler)
 
 ## Roadmap
+- [ ] DCF/IRR calculator (pure frontend, pre-populated from building data)
+- [ ] Debt maturity schedule (portfolio-wide timeline from existing maturity dates)
+- [ ] Shareable deal sheet PDF export
 - [ ] **More REITs**: Add BXP (Boston Properties ~50 buildings), DEI (Douglas Emmett ~40 LA), Hines, CBRE, Prologis. Re-run pipeline.
-- [ ] NYC Open Data live integration in frontend (search + import UI)
-- [ ] ACRIS mortgage data integration (real debt/lender info for NYC)
+- [ ] Building images (Google Street View Static API, image_url column exists)
+- [ ] Data trust labels (tag financial records as "SEC Filing" vs "Market Estimate")
 - [ ] Cook County Assessor API for Chicago (dataset: csik-bsws — has NOI, cap rates)
 - [ ] DC CAMA integration (ArcGIS REST API — commercial property assessments)
-- [ ] More NYC boroughs (Brooklyn, Queens office/mixed-use buildings)
-- [ ] Building image URLs from street view APIs
-- [ ] Frontend building search/browse page
+- [ ] AI document extraction (upload offering memorandum → auto-create building)
+- [ ] Saved searches & watchlists
