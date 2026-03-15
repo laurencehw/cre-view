@@ -17,6 +17,7 @@ export default function NavBar() {
   const navItems = [
     { label: 'Skyline', href: '/' },
     { label: 'Buildings', href: '/buildings' },
+    { label: 'Analytics', href: '/analytics' },
   ];
 
   const isActive = (href: string) => {

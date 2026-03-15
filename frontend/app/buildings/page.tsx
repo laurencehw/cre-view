@@ -146,7 +146,7 @@ export default function BuildingsPage() {
         .catch(err => setDetailFinancialError(err instanceof Error ? err.message : 'Failed'))
         .finally(() => setIsLoadingFinancials(false));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps — authHeaders is stable per session
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buildingId, apiUrl, isAuthenticated]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
@@ -214,6 +214,7 @@ export default function BuildingsPage() {
           financialError={detailFinancialError}
           isLoadingFinancials={isLoadingFinancials}
           isAuthenticated={isAuthenticated}
+          onBuildingSelect={navigateToBuilding}
         />
       </div>
     );

@@ -211,6 +211,192 @@ export async function getDistinctFilters(): Promise<{ cities: string[]; property
   };
 }
 
+// ─── Comps ──────────────────────────────────────────────────────────────────
+
+export async function getComps(buildingId: string, limit = 5): Promise<Building[]> {
+  const ref = await getBuildingById(buildingId);
+  if (!ref) return [];
+
+  const db = await getDb();
+  const minFloors = Math.max(1, Math.floor(ref.floors * 0.8));
+  const maxFloors = Math.ceil(ref.floors * 1.2);
+
+  // Same type + similar floor count, ordered by similarity
+  const result = await db.query<BuildingRow>(
+    `SELECT * FROM buildings
+     WHERE id != $1 AND primary_use ILIKE $2 AND floors BETWEEN $3 AND $4
+     ORDER BY ABS(floors - $5), name LIMIT $6`,
+    [buildingId, ref.primaryUse, minFloors, maxFloors, ref.floors, limit],
+  );
+
+  let rows = result.rows;
+  if (rows.length > 0 && isMockResult(rows[0])) {
+    const use = (ref.primaryUse ?? '').toLowerCase();
+    rows = rows.filter(b =>
+      b.id !== buildingId && (b.primaryUse ?? b.primary_use ?? '').toLowerCase() === use,
+    ).slice(0, limit);
+  }
+
+  // If too few comps, broaden to same city
+  if (rows.length < 2) {
+    const parts = ref.address.split(',').map(s => s.trim());
+    const city = parts.length >= 2 ? parts[parts.length - 2] : '';
+    if (city) {
+      const existingIds = new Set(rows.map(r => r.id));
+      const broader = await db.query<BuildingRow>(
+        `SELECT * FROM buildings WHERE id != $1 AND address ILIKE $2
+         ORDER BY ABS(floors - $3), name LIMIT $4`,
+        [buildingId, `%${city}%`, ref.floors, limit + existingIds.size],
+      );
+      let extra = broader.rows;
+      if (extra.length > 0 && isMockResult(extra[0])) {
+        const c = city.toLowerCase();
+        extra = extra.filter(b => b.id !== buildingId && !existingIds.has(b.id) && b.address.toLowerCase().includes(c));
+      } else {
+        extra = extra.filter(b => !existingIds.has(b.id));
+      }
+      rows = [...rows, ...extra].slice(0, limit);
+    }
+  }
+
+  return rows.map(mapBuildingRow);
+}
+
+// ─── Analytics ──────────────────────────────────────────────────────────────
+
+export interface MarketSummary {
+  byCity: { city: string; count: number; avgCapRate: number; avgFloors: number }[];
+  byType: { type: string; count: number; avgCapRate: number; avgValue: number }[];
+  totals: { buildingCount: number; avgCapRate: number; totalValue: number };
+}
+
+export async function getMarketSummary(): Promise<MarketSummary> {
+  const db = await getDb();
+
+  // Type aggregates
+  const typeResult = await db.query<{
+    primary_use: string; count: string; avg_cap_rate: string; avg_value: string;
+  }>(`
+    SELECT b.primary_use, COUNT(DISTINCT b.id)::text as count,
+           AVG(f.cap_rate)::text as avg_cap_rate,
+           AVG(f.estimated_value)::text as avg_value
+    FROM buildings b
+    LEFT JOIN financials f ON f.building_id = b.id
+    WHERE b.primary_use IS NOT NULL AND b.primary_use != ''
+    GROUP BY b.primary_use ORDER BY COUNT(DISTINCT b.id) DESC
+  `);
+
+  // Totals
+  const totalsResult = await db.query<{ count: string; avg_cap_rate: string; total_value: string }>(`
+    SELECT COUNT(DISTINCT b.id)::text as count,
+           AVG(f.cap_rate)::text as avg_cap_rate,
+           COALESCE(SUM(f.estimated_value), 0)::text as total_value
+    FROM buildings b
+    LEFT JOIN financials f ON f.building_id = b.id
+  `);
+
+  // City aggregation via address parsing in JS
+  const addrResult = await db.query<{ address: string; floors: string; cap_rate: string | null }>(`
+    SELECT b.address, b.floors::text, f.cap_rate::text
+    FROM buildings b
+    LEFT JOIN financials f ON f.building_id = b.id
+  `);
+
+  const cityAgg = new Map<string, { count: number; capRates: number[]; floors: number[] }>();
+  for (const row of addrResult.rows) {
+    const parts = (row.address ?? '').split(',').map((s: string) => s.trim());
+    const city = parts.length >= 2 ? parts[parts.length - 2] : '';
+    if (!city || city.length <= 1 || /^\d/.test(city)) continue;
+    const entry = cityAgg.get(city) ?? { count: 0, capRates: [], floors: [] };
+    entry.count++;
+    const cr = parseFloat(row.cap_rate ?? '');
+    if (cr > 0) entry.capRates.push(cr);
+    entry.floors.push(parseInt(row.floors) || 0);
+    cityAgg.set(city, entry);
+  }
+
+  const byCity = Array.from(cityAgg.entries())
+    .map(([city, d]) => ({
+      city,
+      count: d.count,
+      avgCapRate: d.capRates.length ? d.capRates.reduce((a, b) => a + b, 0) / d.capRates.length : 0,
+      avgFloors: d.floors.length ? Math.round(d.floors.reduce((a, b) => a + b, 0) / d.floors.length) : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const byType = typeResult.rows.map(r => ({
+    type: r.primary_use,
+    count: parseInt(r.count),
+    avgCapRate: parseFloat(r.avg_cap_rate) || 0,
+    avgValue: parseFloat(r.avg_value) || 0,
+  }));
+
+  const t = totalsResult.rows[0];
+  return {
+    byCity,
+    byType,
+    totals: {
+      buildingCount: parseInt(t?.count ?? '0'),
+      avgCapRate: parseFloat(t?.avg_cap_rate ?? '0') || 0,
+      totalValue: parseFloat(t?.total_value ?? '0'),
+    },
+  };
+}
+
+export interface Portfolio {
+  owner: string;
+  buildingCount: number;
+  totalValue: number;
+  avgCapRate: number;
+  buildings: { id: string; name: string; address: string }[];
+}
+
+export async function getPortfolios(): Promise<Portfolio[]> {
+  const db = await getDb();
+
+  const ownerResult = await db.query<{
+    owner: string; count: string; total_value: string; avg_cap_rate: string;
+  }>(`
+    SELECT b.owner, COUNT(DISTINCT b.id)::text as count,
+           COALESCE(SUM(f.estimated_value), 0)::text as total_value,
+           AVG(f.cap_rate)::text as avg_cap_rate
+    FROM buildings b
+    LEFT JOIN financials f ON f.building_id = b.id
+    WHERE b.owner IS NOT NULL AND b.owner != '' AND LOWER(b.owner) != 'unknown'
+    GROUP BY b.owner
+    HAVING COUNT(DISTINCT b.id) >= 2
+    ORDER BY SUM(f.estimated_value) DESC NULLS LAST
+    LIMIT 20
+  `);
+
+  if (ownerResult.rows.length === 0) return [];
+
+  // Fetch buildings for all portfolio owners in one query
+  const ownerNames = ownerResult.rows.map(r => r.owner);
+  const placeholders = ownerNames.map((_, i) => `$${i + 1}`).join(',');
+  const bldgResult = await db.query<{ id: string; name: string; address: string; owner: string }>(
+    `SELECT id, name, address, owner FROM buildings WHERE owner IN (${placeholders}) ORDER BY owner, name`,
+    ownerNames,
+  );
+
+  const bldgsByOwner = new Map<string, { id: string; name: string; address: string }[]>();
+  for (const b of bldgResult.rows) {
+    const list = bldgsByOwner.get(b.owner) ?? [];
+    list.push({ id: b.id, name: b.name, address: b.address });
+    bldgsByOwner.set(b.owner, list);
+  }
+
+  return ownerResult.rows.map(r => ({
+    owner: r.owner,
+    buildingCount: parseInt(r.count),
+    totalValue: parseFloat(r.total_value),
+    avgCapRate: parseFloat(r.avg_cap_rate) || 0,
+    buildings: bldgsByOwner.get(r.owner) ?? [],
+  }));
+}
+
+// ─── Single building lookup ─────────────────────────────────────────────────
+
 export async function getBuildingById(id: string): Promise<Building | null> {
   const db = await getDb();
   const result = await db.query<BuildingRow>(

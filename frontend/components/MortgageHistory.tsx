@@ -117,7 +117,7 @@ export default function MortgageHistory({ building }: MortgageHistoryProps) {
 
     fetchMortgageData();
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps — fetch once per building
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [building.id]);
 
   return (

@@ -1,11 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import type { Building, BuildingFinancials, DetectedBuilding } from '@/lib/types';
 import { formatCurrency, formatPercent } from '@/lib/format';
 import FinancialPanel from '@/components/FinancialPanel';
 import BuildingMap from '@/components/BuildingMap';
 import MortgageHistory from '@/components/MortgageHistory';
+import CompsTable from '@/components/CompsTable';
+
+const InteractiveMap = dynamic(() => import('@/components/InteractiveMap'), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-gray-900/40 rounded-xl animate-pulse" />,
+});
 
 interface BuildingDetailTabsProps {
   building: Building;
@@ -13,6 +20,7 @@ interface BuildingDetailTabsProps {
   financialError: string | null;
   isLoadingFinancials: boolean;
   isAuthenticated: boolean;
+  onBuildingSelect?: (id: string) => void;
 }
 
 type Tab = 'overview' | 'financials' | 'ownership' | 'location';
@@ -33,6 +41,7 @@ export default function BuildingDetailTabs({
   financialError,
   isLoadingFinancials,
   isAuthenticated,
+  onBuildingSelect,
 }: BuildingDetailTabsProps) {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
@@ -116,6 +125,18 @@ export default function BuildingDetailTabs({
                 )}
               </section>
             )}
+
+            {/* Comparable Buildings */}
+            <section>
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                Comparable Buildings
+              </h3>
+              <CompsTable
+                buildingId={building.id}
+                currentBuilding={building}
+                onBuildingSelect={onBuildingSelect}
+              />
+            </section>
 
             {/* ACRIS for NYC buildings */}
             {building.address.includes('New York') && isAuthenticated && (
@@ -244,9 +265,10 @@ export default function BuildingDetailTabs({
 
         {activeTab === 'location' && (
           <div className="space-y-4">
-            <BuildingMap
+            <InteractiveMap
               buildings={[building]}
               selectedBuildingId={building.id}
+              height="350px"
             />
             {building.latitude && building.longitude && (
               <p className="text-xs text-gray-500">

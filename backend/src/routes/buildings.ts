@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { param, query, validationResult } from 'express-validator';
-import { listBuildings, getBuildingById, getFinancialsByBuildingId, getDistinctFilters } from '../db/repositories';
+import { listBuildings, getBuildingById, getFinancialsByBuildingId, getDistinctFilters, getComps } from '../db/repositories';
 import { optionalAuth, requireAuth } from '../middleware/auth';
 
 export const buildingsRouter = Router();
@@ -86,6 +86,31 @@ buildingsRouter.get(
       // Individual building details are stable — cache for 10 minutes
       res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=60');
       res.json(building);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// ─── GET /api/buildings/:id/comps ─────────────────────────────────────────────
+buildingsRouter.get(
+  '/buildings/:id/comps',
+  optionalAuth,
+  [
+    param('id').isString().notEmpty(),
+    query('limit').optional().isInt({ min: 1, max: 20 }).toInt(),
+  ],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ error: 'Invalid params', details: errors.array() });
+        return;
+      }
+
+      const comps = await getComps(req.params.id, req.query.limit ? Number(req.query.limit) : 5);
+      res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=60');
+      res.json({ data: comps });
     } catch (err) {
       next(err);
     }

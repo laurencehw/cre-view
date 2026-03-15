@@ -45,7 +45,7 @@ export default function BuildingSearchFilters({
       }
     }, 300);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps — debounce: only fire on searchInput change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
   const update = (partial: Partial<FilterState>) => {
