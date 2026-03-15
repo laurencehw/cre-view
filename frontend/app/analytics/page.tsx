@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { formatCurrency, formatPercent } from '@/lib/format';
 import { CityChart, CapRateChart, TypeMixChart } from '@/components/MarketCharts';
+import DebtSchedule from '@/components/DebtSchedule';
 import type { Building } from '@/lib/types';
 
 // Load map client-side only (Leaflet needs window)
@@ -142,6 +143,17 @@ export default function AnalyticsPage() {
           </div>
         </section>
       )}
+
+      {/* Debt Maturity Schedule */}
+      <section className="mb-8">
+        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          Debt Maturity Schedule
+        </h3>
+        <p className="text-xs text-gray-600 mb-4">Portfolio-wide debt maturity ladder by year</p>
+        <div className="rounded-xl border border-gray-800 p-5">
+          <DebtSchedule onBuildingClick={navigateToBuilding} />
+        </div>
+      </section>
 
       {/* Portfolio Rankings */}
       {portfolios.length > 0 && (

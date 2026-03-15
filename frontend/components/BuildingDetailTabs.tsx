@@ -8,6 +8,8 @@ import FinancialPanel from '@/components/FinancialPanel';
 import BuildingMap from '@/components/BuildingMap';
 import MortgageHistory from '@/components/MortgageHistory';
 import CompsTable from '@/components/CompsTable';
+import DCFCalculator from '@/components/DCFCalculator';
+import DealSheet from '@/components/DealSheet';
 
 const InteractiveMap = dynamic(() => import('@/components/InteractiveMap'), {
   ssr: false,
@@ -23,7 +25,7 @@ interface BuildingDetailTabsProps {
   onBuildingSelect?: (id: string) => void;
 }
 
-type Tab = 'overview' | 'financials' | 'ownership' | 'location';
+type Tab = 'overview' | 'financials' | 'dcf' | 'ownership' | 'location';
 
 function StatRow({ label, value }: { label: string; value: string | number | null | undefined }) {
   if (value == null || value === '' || value === 0) return null;
@@ -48,6 +50,7 @@ export default function BuildingDetailTabs({
   const tabs: { id: Tab; label: string }[] = [
     { id: 'overview', label: 'Overview' },
     { id: 'financials', label: 'Financials' },
+    { id: 'dcf', label: 'DCF / IRR' },
     { id: 'ownership', label: 'Ownership' },
     { id: 'location', label: 'Location' },
   ];
@@ -168,14 +171,44 @@ export default function BuildingDetailTabs({
                 {financialError}
               </div>
             ) : financials ? (
-              <FinancialPanel
-                building={{ buildingId: building.id, name: building.name, confidence: 1 }}
-                financials={financials}
-                details={building}
-              />
+              <div className="space-y-6">
+                <FinancialPanel
+                  building={{ buildingId: building.id, name: building.name, confidence: 1 }}
+                  financials={financials}
+                  details={building}
+                />
+                <div className="px-6 pb-6 max-w-3xl mx-auto">
+                  <DealSheet building={building} financials={financials} />
+                </div>
+              </div>
             ) : (
               <div className="text-center py-12 text-gray-500">
                 <p>No financial data available for this building</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'dcf' && (
+          <div>
+            {!isAuthenticated ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500 mb-2">Sign in to use the DCF calculator</p>
+                <p className="text-xs text-gray-600">Financial data required for analysis</p>
+              </div>
+            ) : !financials ? (
+              <div className="text-center py-12 text-gray-500">
+                <p>No financial data available for DCF analysis</p>
+              </div>
+            ) : (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                  DCF / IRR Analysis
+                </h3>
+                <p className="text-xs text-gray-600 mb-4">
+                  Pre-populated from building data. Adjust assumptions to model different scenarios.
+                </p>
+                <DCFCalculator financials={financials} />
               </div>
             )}
           </div>

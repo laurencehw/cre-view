@@ -395,6 +395,61 @@ export async function getPortfolios(): Promise<Portfolio[]> {
   }));
 }
 
+// ─── Debt Schedule ──────────────────────────────────────────────────────────
+
+export interface DebtMaturity {
+  buildingId: string;
+  buildingName: string;
+  tranche: string;
+  amount: number;
+  maturityDate: string;
+}
+
+export async function getDebtSchedule(): Promise<DebtMaturity[]> {
+  const db = await getDb();
+
+  const result = await db.query<{
+    building_id: string; name: string;
+    senior_loan_amount: string; senior_loan_maturity: string | Date;
+    mezz_amount: string | null; mezz_maturity: string | Date | null;
+  }>(`
+    SELECT b.id as building_id, b.name,
+           f.senior_loan_amount::text, f.senior_loan_maturity,
+           f.mezz_amount::text, f.mezz_maturity
+    FROM buildings b
+    JOIN financials f ON f.building_id = b.id
+    WHERE f.senior_loan_maturity IS NOT NULL
+    ORDER BY f.senior_loan_maturity
+  `);
+
+  const maturities: DebtMaturity[] = [];
+  for (const row of result.rows) {
+    const toDateStr = (v: string | Date) => v instanceof Date ? v.toISOString().split('T')[0] : String(v);
+
+    if (row.senior_loan_amount && row.senior_loan_maturity) {
+      maturities.push({
+        buildingId: row.building_id,
+        buildingName: row.name,
+        tranche: 'Senior',
+        amount: parseFloat(row.senior_loan_amount),
+        maturityDate: toDateStr(row.senior_loan_maturity),
+      });
+    }
+
+    if (row.mezz_amount && row.mezz_maturity) {
+      maturities.push({
+        buildingId: row.building_id,
+        buildingName: row.name,
+        tranche: 'Mezzanine',
+        amount: parseFloat(row.mezz_amount),
+        maturityDate: toDateStr(row.mezz_maturity),
+      });
+    }
+  }
+
+  return maturities.sort((a, b) => a.maturityDate.localeCompare(b.maturityDate));
+}
+
 // ─── Single building lookup ─────────────────────────────────────────────────
 
 export async function getBuildingById(id: string): Promise<Building | null> {
