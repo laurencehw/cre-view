@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/lib/auth';
+import NavBar from '@/components/NavBar';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -14,7 +15,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="min-h-screen bg-gray-950 text-white antialiased">
         <ErrorBoundary>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <div className="flex flex-col min-h-screen">
+              <NavBar />
+              <div className="flex-1 overflow-auto">{children}</div>
+            </div>
+          </AuthProvider>
         </ErrorBoundary>
       </body>
     </html>

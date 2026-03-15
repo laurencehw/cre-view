@@ -6,7 +6,6 @@ import BuildingCard from '@/components/BuildingCard';
 import FinancialPanel from '@/components/FinancialPanel';
 import SkylineOverlay from '@/components/SkylineOverlay';
 import BuildingMap from '@/components/BuildingMap';
-import AuthPanel from '@/components/AuthPanel';
 import { useAuth } from '@/lib/auth';
 import type { DetectedBuilding, Building, BuildingFinancials } from '@/lib/types';
 
@@ -213,27 +212,7 @@ export default function HomePage() {
   }, [filteredBuildings, selectedBuilding, handleBuildingSelect]);
 
   return (
-    <main className="flex flex-col min-h-screen">
-      {/* Skip to content link for keyboard / screen reader users */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-brand-600 focus:text-white focus:rounded-lg"
-      >
-        Skip to main content
-      </a>
-
-      {/* Header */}
-      <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl" aria-hidden="true">🏙️</span>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">CRE View</h1>
-            <p className="text-xs text-gray-400">Skyline Financial Intelligence</p>
-          </div>
-        </div>
-        <AuthPanel />
-      </header>
-
+    <main className="flex flex-col flex-1">
       <div id="main-content" className="flex flex-1 flex-col lg:flex-row overflow-hidden">
         {/* Left panel — upload */}
         <section aria-label="Skyline capture and building list" className="w-full lg:w-96 border-b lg:border-b-0 lg:border-r border-gray-800 p-6 flex flex-col gap-6 overflow-auto">

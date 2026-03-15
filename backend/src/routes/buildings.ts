@@ -1,9 +1,25 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { param, query, validationResult } from 'express-validator';
-import { listBuildings, getBuildingById, getFinancialsByBuildingId } from '../db/repositories';
+import { listBuildings, getBuildingById, getFinancialsByBuildingId, getDistinctFilters } from '../db/repositories';
 import { optionalAuth, requireAuth } from '../middleware/auth';
 
 export const buildingsRouter = Router();
+
+// ─── GET /api/buildings/filters ────────────────────────────────────────────────
+// Returns distinct cities and property types for filter dropdowns.
+buildingsRouter.get(
+  '/buildings/filters',
+  optionalAuth,
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const filters = await getDistinctFilters();
+      res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=300');
+      res.json(filters);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // ─── GET /api/buildings ───────────────────────────────────────────────────────
 buildingsRouter.get(
@@ -13,6 +29,12 @@ buildingsRouter.get(
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
     query('search').optional().isString().trim(),
+    query('city').optional().isString().trim(),
+    query('primaryUse').optional().isString().trim(),
+    query('minFloors').optional().isInt({ min: 1 }).toInt(),
+    query('maxFloors').optional().isInt({ min: 1 }).toInt(),
+    query('sortBy').optional().isIn(['name', 'floors', 'completionYear', 'primaryUse', 'address', 'owner']),
+    query('sortDir').optional().isIn(['ASC', 'DESC']),
   ],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -26,9 +48,14 @@ buildingsRouter.get(
         page: req.query.page ? Number(req.query.page) : undefined,
         limit: req.query.limit ? Number(req.query.limit) : undefined,
         search: req.query.search as string | undefined,
+        city: req.query.city as string | undefined,
+        primaryUse: req.query.primaryUse as string | undefined,
+        minFloors: req.query.minFloors ? Number(req.query.minFloors) : undefined,
+        maxFloors: req.query.maxFloors ? Number(req.query.maxFloors) : undefined,
+        sortBy: req.query.sortBy as string | undefined,
+        sortDir: req.query.sortDir as 'ASC' | 'DESC' | undefined,
       });
 
-      // Building list changes infrequently — cache for 5 minutes
       res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
       res.json(result);
     } catch (err) {

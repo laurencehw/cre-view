@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import pinoHttp from 'pino-http';
 import logger from './services/logger';
 import { analyzeRouter } from './routes/analyze';
@@ -49,10 +50,25 @@ app.use('/api', nycDataRouter);
 // The Next.js static export lives at frontend/out (built at deploy time).
 // Serving it from Express eliminates CORS entirely — same origin for API + UI.
 const frontendDir = path.join(__dirname, '..', '..', 'frontend', 'out');
-app.use(express.static(frontendDir));
-// SPA fallback: any non-API route serves index.html
+app.use(express.static(frontendDir, { extensions: ['html'] }));
+// SPA fallback: for client-side routes like /buildings/bld_123,
+// try to serve the parent page (buildings.html), then fall back to index.html
 app.use((req, res, next) => {
   if (req.path.startsWith('/api')) return next();
+
+  // Try parent path (e.g., /buildings/bld_xxx → buildings.html)
+  const parentDir = path.dirname(req.path);
+  if (parentDir !== '/' && parentDir !== '.') {
+    const parentHtml = path.join(frontendDir, parentDir + '.html');
+    if (fs.existsSync(parentHtml)) {
+      return res.sendFile(parentHtml);
+    }
+    const parentIndex = path.join(frontendDir, parentDir, 'index.html');
+    if (fs.existsSync(parentIndex)) {
+      return res.sendFile(parentIndex);
+    }
+  }
+
   res.sendFile(path.join(frontendDir, 'index.html'), (err) => {
     if (err) next();
   });

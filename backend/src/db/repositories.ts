@@ -37,7 +37,7 @@ interface BuildingRow {
 interface FinancialsRow {
   id: string;
   building_id: string;
-  as_of_date: string;
+  as_of_date: string | Date;
   estimated_value: number;
   currency: string;
   cap_rate: number;
@@ -46,11 +46,11 @@ interface FinancialsRow {
   senior_loan_amount: number;
   senior_loan_lender: string;
   senior_loan_rate: number;
-  senior_loan_maturity: string;
+  senior_loan_maturity: string | Date;
   mezz_amount: number | null;
   mezz_lender: string | null;
   mezz_rate: number | null;
-  mezz_maturity: string | null;
+  mezz_maturity: string | Date | null;
   total_equity: number;
 }
 
@@ -89,61 +89,126 @@ export async function listBuildings(opts: {
   page?: number;
   limit?: number;
   search?: string;
+  city?: string;
+  primaryUse?: string;
+  minFloors?: number;
+  maxFloors?: number;
+  sortBy?: string;
+  sortDir?: 'ASC' | 'DESC';
 }): Promise<PaginatedResult<Building>> {
   const page = opts.page ?? 1;
   const limit = opts.limit ?? 20;
   const offset = (page - 1) * limit;
   const db = await getDb();
 
+  // Build parameterized WHERE clause
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
+  let idx = 1;
+
   if (opts.search) {
-    const pattern = `%${opts.search}%`;
-    const countResult = await db.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM buildings WHERE name ILIKE $1 OR address ILIKE $1`,
-      [pattern],
-    );
-    const dataResult = await db.query<BuildingRow>(
-      `SELECT * FROM buildings WHERE name ILIKE $1 OR address ILIKE $1 ORDER BY name LIMIT $2 OFFSET $3`,
-      [pattern, limit, offset],
-    );
-
-    // Handle mock client which returns full array
-    const rows = dataResult.rows;
-    if (rows.length > 0 && isMockResult(rows[0])) {
-      // Mock client — filter/paginate in JS
-      const search = opts.search.toLowerCase();
-      const filtered = rows.filter(
-        (b) =>
-          b.name.toLowerCase().includes(search) ||
-          b.address.toLowerCase().includes(search),
-      );
-      const total = filtered.length;
-      const data = filtered.slice(offset, offset + limit).map(mapBuildingRow);
-      return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
-    }
-
-    const total = parseInt(countResult.rows[0]?.count ?? '0', 10);
-    const data = rows.map(mapBuildingRow);
-    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    conditions.push(`(name ILIKE $${idx} OR address ILIKE $${idx} OR owner ILIKE $${idx})`);
+    params.push(`%${opts.search}%`);
+    idx++;
+  }
+  if (opts.city) {
+    conditions.push(`address ILIKE $${idx}`);
+    params.push(`%${opts.city}%`);
+    idx++;
+  }
+  if (opts.primaryUse) {
+    conditions.push(`primary_use ILIKE $${idx}`);
+    params.push(opts.primaryUse);
+    idx++;
+  }
+  if (opts.minFloors != null) {
+    conditions.push(`floors >= $${idx}`);
+    params.push(opts.minFloors);
+    idx++;
+  }
+  if (opts.maxFloors != null) {
+    conditions.push(`floors <= $${idx}`);
+    params.push(opts.maxFloors);
+    idx++;
   }
 
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  // Whitelist sort columns to prevent injection
+  const sortColumns: Record<string, string> = {
+    name: 'name', floors: 'floors', completionYear: 'completion_year',
+    primaryUse: 'primary_use', address: 'address', owner: 'owner',
+  };
+  const orderCol = sortColumns[opts.sortBy ?? ''] ?? 'name';
+  const orderDir = opts.sortDir === 'DESC' ? 'DESC' : 'ASC';
+
   const countResult = await db.query<{ count: string }>(
-    `SELECT COUNT(*) as count FROM buildings`,
+    `SELECT COUNT(*) as count FROM buildings ${where}`,
+    params,
   );
   const dataResult = await db.query<BuildingRow>(
-    `SELECT * FROM buildings ORDER BY name LIMIT $1 OFFSET $2`,
-    [limit, offset],
+    `SELECT * FROM buildings ${where} ORDER BY ${orderCol} ${orderDir} LIMIT $${idx} OFFSET $${idx + 1}`,
+    [...params, limit, offset],
   );
 
   const rows = dataResult.rows;
+
+  // Mock client returns camelCase objects — filter/paginate in JS
   if (rows.length > 0 && isMockResult(rows[0])) {
-    const total = rows.length;
-    const data = rows.slice(offset, offset + limit).map(mapBuildingRow);
+    let filtered = rows as BuildingRow[];
+    if (opts.search) {
+      const s = opts.search.toLowerCase();
+      filtered = filtered.filter(b =>
+        b.name.toLowerCase().includes(s) || b.address.toLowerCase().includes(s) || (b.owner ?? '').toLowerCase().includes(s),
+      );
+    }
+    if (opts.city) {
+      const c = opts.city.toLowerCase();
+      filtered = filtered.filter(b => b.address.toLowerCase().includes(c));
+    }
+    if (opts.primaryUse) {
+      const u = opts.primaryUse.toLowerCase();
+      filtered = filtered.filter(b => (b.primaryUse ?? b.primary_use ?? '').toLowerCase() === u);
+    }
+    if (opts.minFloors != null) filtered = filtered.filter(b => Number(b.floors) >= opts.minFloors!);
+    if (opts.maxFloors != null) filtered = filtered.filter(b => Number(b.floors) <= opts.maxFloors!);
+    const total = filtered.length;
+    const data = filtered.slice(offset, offset + limit).map(mapBuildingRow);
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   const total = parseInt(countResult.rows[0]?.count ?? '0', 10);
   const data = rows.map(mapBuildingRow);
   return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+}
+
+export async function getDistinctFilters(): Promise<{ cities: string[]; propertyTypes: string[] }> {
+  const db = await getDb();
+
+  const typeResult = await db.query<{ primary_use: string }>(
+    `SELECT DISTINCT primary_use FROM buildings WHERE primary_use IS NOT NULL AND primary_use != '' ORDER BY primary_use`,
+  );
+
+  const addrResult = await db.query<{ address: string }>(
+    `SELECT DISTINCT address FROM buildings WHERE address IS NOT NULL`,
+  );
+
+  // Extract city names from addresses (format: "..., City, ST")
+  const citySet = new Set<string>();
+  for (const { address } of addrResult.rows) {
+    const parts = address.split(',').map((s: string) => s.trim());
+    if (parts.length >= 2) {
+      const candidate = parts[parts.length - 2];
+      if (candidate && candidate.length > 1 && !/^\d/.test(candidate)) {
+        citySet.add(candidate);
+      }
+    }
+  }
+
+  return {
+    cities: Array.from(citySet).sort(),
+    propertyTypes: typeResult.rows.map(r => r.primary_use).filter(Boolean),
+  };
 }
 
 export async function getBuildingById(id: string): Promise<Building | null> {

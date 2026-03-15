@@ -39,6 +39,14 @@ export interface DebtTranche {
   maturityDate: string;
 }
 
+export interface AcrisTransaction {
+  documentId: string;
+  documentType: string;
+  recordedDate: string;
+  amount: number;
+  parties: { name: string; role: string }[];
+}
+
 export interface BuildingFinancials {
   buildingId: string;
   asOfDate: string;
