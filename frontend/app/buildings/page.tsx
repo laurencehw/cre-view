@@ -7,6 +7,8 @@ import { useAuth } from '@/lib/auth';
 import BuildingGrid from '@/components/BuildingGrid';
 import BuildingSearchFilters, { defaultFilters, type FilterState } from '@/components/BuildingSearchFilters';
 import BuildingDetailTabs from '@/components/BuildingDetailTabs';
+import SavedSearches from '@/components/SavedSearches';
+import WatchlistButton from '@/components/WatchlistButton';
 
 export default function BuildingsPage() {
   const { isAuthenticated, authHeaders } = useAuth();
@@ -200,7 +202,10 @@ export default function BuildingsPage() {
           >
             &larr; Back to buildings
           </button>
-          <h2 className="text-2xl font-bold">{detailBuilding.name}</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold">{detailBuilding.name}</h2>
+            <WatchlistButton buildingId={detailBuilding.id} />
+          </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-gray-400">
             <span>{detailBuilding.address}</span>
             {detailBuilding.floors > 0 && <span>{detailBuilding.floors} floors</span>}
@@ -229,12 +234,17 @@ export default function BuildingsPage() {
       </div>
 
       <div className="mb-6">
-        <BuildingSearchFilters
-          filters={filters}
-          onFiltersChange={handleFiltersChange}
-          cities={cities}
-          propertyTypes={propertyTypes}
-        />
+        <div className="flex items-start gap-3">
+          <div className="flex-1">
+            <BuildingSearchFilters
+              filters={filters}
+              onFiltersChange={handleFiltersChange}
+              cities={cities}
+              propertyTypes={propertyTypes}
+            />
+          </div>
+          <SavedSearches currentFilters={filters} onLoadSearch={handleFiltersChange} />
+        </div>
       </div>
 
       <BuildingGrid

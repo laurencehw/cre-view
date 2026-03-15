@@ -31,6 +31,7 @@ export interface DebtTranche {
 export interface BuildingFinancials {
   buildingId: string;
   asOfDate: string;
+  dataSource?: 'SEC Filing' | 'NYC PLUTO' | 'Market Estimate';
   valuation: {
     estimatedValue: number;
     currency: string;

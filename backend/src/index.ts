@@ -11,6 +11,8 @@ import { healthRouter } from './routes/health';
 import { authRouter } from './routes/auth';
 import { nycDataRouter } from './routes/nycData';
 import { analyticsRouter } from './routes/analytics';
+import { watchlistRouter } from './routes/watchlist';
+import { savedSearchesRouter } from './routes/savedSearches';
 import { rateLimit } from './middleware/rateLimit';
 
 // Load .env from project root (monorepo), falling back to cwd
@@ -47,6 +49,8 @@ app.use('/api', analyzeRouter);
 app.use('/api', buildingsRouter);
 app.use('/api', nycDataRouter);
 app.use('/api', analyticsRouter);
+app.use('/api', watchlistRouter);
+app.use('/api', savedSearchesRouter);
 
 // ─── Serve frontend static files (production) ───────────────────────────────
 // The Next.js static export lives at frontend/out (built at deploy time).

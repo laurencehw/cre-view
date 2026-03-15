@@ -65,7 +65,16 @@ node backend/scripts/reit_data/_seed_reit.js        # Seed REIT data into DB
 - `frontend/components/InteractiveMap.tsx` — Leaflet map with dark CARTO tiles and custom markers
 - `frontend/components/MarketCharts.tsx` — SVG bar/donut charts for analytics
 - `frontend/components/MortgageHistory.tsx` — ACRIS mortgage/deed history for NYC buildings
+- `frontend/components/DCFCalculator.tsx` — DCF/IRR calculator with sensitivity table
+- `frontend/components/DealSheet.tsx` — Printable deal sheet PDF generation
+- `frontend/components/DebtSchedule.tsx` — Debt maturity ladder chart
+- `frontend/components/BuildingImage.tsx` — Street View image with fallback
+- `frontend/components/WatchlistButton.tsx` — Bookmark/watchlist toggle for buildings
+- `frontend/components/SavedSearches.tsx` — Save/load search filter presets
+- `frontend/components/DataTrustBadge.tsx` — "SEC Filing" / "Market Estimate" badge
 - `frontend/components/FinancialPanel.tsx` — Debt table, cap table, KPIs
+- `backend/src/routes/watchlist.ts` — Watchlist CRUD endpoints
+- `backend/src/routes/savedSearches.ts` — Saved search CRUD endpoints
 - `frontend/lib/types.ts` — Shared TypeScript interfaces
 - `frontend/lib/api.ts` — PaginatedResult type
 - `frontend/lib/supabase.ts` — Frontend Supabase client
@@ -79,6 +88,7 @@ All in `.env` at project root (gitignored). Key vars:
 - `OPENAI_API_KEY` — Vision API
 - `VISION_PROVIDER` — `openai` (active) or `mock`
 - `NYC_OPEN_DATA_APP_TOKEN` — Optional, for higher rate limits on NYC API
+- `GOOGLE_STREET_VIEW_KEY` — Optional, for building exterior images
 
 ## API Endpoints
 - `GET /api/buildings` — List buildings (paginated, search, city/type/floors filters, sort)
@@ -89,6 +99,13 @@ All in `.env` at project root (gitignored). Key vars:
 - `GET /api/buildings/:id/financials/export` — CSV export (auth required)
 - `GET /api/analytics/market-summary` — Aggregate stats by city and property type
 - `GET /api/analytics/portfolios` — Owner portfolios (2+ buildings, ranked by value)
+- `GET /api/analytics/debt-schedule` — All loan maturities across portfolio
+- `GET /api/watchlist` — User's watchlisted buildings (auth required)
+- `POST /api/watchlist/:buildingId` — Add building to watchlist (auth required)
+- `DELETE /api/watchlist/:buildingId` — Remove from watchlist (auth required)
+- `GET /api/saved-searches` — User's saved search filters (auth required)
+- `POST /api/saved-searches` — Save a search (auth required)
+- `DELETE /api/saved-searches/:id` — Delete a saved search (auth required)
 - `POST /api/analyze-skyline` — Upload image for building detection
 - `GET /api/nyc/pluto/search` — Live search NYC PLUTO data
 - `POST /api/nyc/import` — Import PLUTO buildings to DB (auth required)
@@ -104,21 +121,22 @@ All in `.env` at project root (gitignored). Key vars:
 - **Auth**: Supabase Auth integrated (frontend + backend), JWT fallback for non-Supabase deployments
 - **Navigation**: Multi-page SPA — Skyline (home), Buildings (search/detail), Analytics (dashboard)
 - **Search**: Full-text search + city/type/floor filters + sorting + pagination
-- **Building detail**: Tabbed view (overview, financials, ownership pie chart, location map)
+- **Building detail**: Tabbed view (overview, financials, DCF/IRR, ownership pie chart, location map)
 - **Comps**: Comparable buildings matched by type and floor count with financial comparison
+- **DCF/IRR**: Pre-populated calculator with sensitivity table (exit cap × NOI growth)
+- **Deal sheets**: One-click printable PDF with building details + financials + cap table
 - **Interactive map**: Leaflet with dark CARTO tiles, custom markers, popups (on analytics + detail pages)
-- **Analytics**: Market summary by city/type, portfolio rankings, SVG charts
+- **Analytics**: Market summary by city/type, portfolio rankings, debt maturity schedule, SVG charts
 - **ACRIS**: NYC mortgage/deed history auto-lookup on building detail pages
+- **Building images**: Street View images from coordinates (requires GOOGLE_STREET_VIEW_KEY)
+- **Data trust**: Financial records tagged as "SEC Filing", "NYC PLUTO", or "Market Estimate"
+- **Watchlists**: Authenticated users can bookmark buildings and save search filters
 - **Deployment**: Render (Express serves static frontend with SPA fallback, Supabase Postgres via pooler)
 
 ## Roadmap
-- [ ] DCF/IRR calculator (pure frontend, pre-populated from building data)
-- [ ] Debt maturity schedule (portfolio-wide timeline from existing maturity dates)
-- [ ] Shareable deal sheet PDF export
 - [ ] **More REITs**: Add BXP (Boston Properties ~50 buildings), DEI (Douglas Emmett ~40 LA), Hines, CBRE, Prologis. Re-run pipeline.
-- [ ] Building images (Google Street View Static API, image_url column exists)
-- [ ] Data trust labels (tag financial records as "SEC Filing" vs "Market Estimate")
 - [ ] Cook County Assessor API for Chicago (dataset: csik-bsws — has NOI, cap rates)
 - [ ] DC CAMA integration (ArcGIS REST API — commercial property assessments)
 - [ ] AI document extraction (upload offering memorandum → auto-create building)
-- [ ] Saved searches & watchlists
+- [ ] Email alerts for watchlisted buildings
+- [ ] Collaboration features (notes, tags, deal pipeline)

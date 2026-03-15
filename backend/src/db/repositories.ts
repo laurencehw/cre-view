@@ -519,7 +519,31 @@ export async function getFinancialsByBuildingId(buildingId: string): Promise<Bui
       totalEquity: Number(fin.total_equity),
       capTable,
     },
+    dataSource: inferDataSource(buildingId, capTable),
   };
 
   return financials;
+}
+
+// Known REIT names from SEC filings
+const KNOWN_REITS = [
+  'vornado', 'sl green', 'paramount', 'brookfield', 'boston properties',
+  'mack-cali', 'brandywine', 'kilroy', 'hudson pacific', 'douglas emmett',
+  'equity residential', 'essex property', 'avalonbay', 'prologis', 'hines',
+  'tishman speyer', 'silverstein', 'related companies', 'oxford properties',
+  'rxr', 'columbia property', 'empire state realty',
+];
+
+function inferDataSource(
+  _buildingId: string,
+  capTable: CapTableEntry[],
+): 'SEC Filing' | 'NYC PLUTO' | 'Market Estimate' {
+  // Check if any cap table investor matches a known REIT
+  for (const entry of capTable) {
+    const name = entry.investor.toLowerCase();
+    if (KNOWN_REITS.some(reit => name.includes(reit))) {
+      return 'SEC Filing';
+    }
+  }
+  return 'Market Estimate';
 }

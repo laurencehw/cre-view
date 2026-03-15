@@ -10,6 +10,7 @@ import MortgageHistory from '@/components/MortgageHistory';
 import CompsTable from '@/components/CompsTable';
 import DCFCalculator from '@/components/DCFCalculator';
 import DealSheet from '@/components/DealSheet';
+import DataTrustBadge from '@/components/DataTrustBadge';
 
 const InteractiveMap = dynamic(() => import('@/components/InteractiveMap'), {
   ssr: false,
@@ -123,8 +124,10 @@ export default function BuildingDetailTabs({
                     <p className="text-lg font-semibold">{formatCurrency(financials.debt.totalDebt, true)}</p>
                   </div>
                 </div>
-                {hasVerifiedOwnership && (
-                  <p className="text-xs text-green-400 mt-2">Ownership data verified from SEC filings</p>
+                {financials?.dataSource && (
+                  <div className="mt-2">
+                    <DataTrustBadge source={financials.dataSource} />
+                  </div>
                 )}
               </section>
             )}
@@ -224,9 +227,12 @@ export default function BuildingDetailTabs({
               </div>
             ) : (
               <div className="space-y-6">
-                {hasVerifiedOwnership && (
-                  <div className="rounded-lg bg-green-900/20 border border-green-800/50 p-3 text-xs text-green-300">
-                    Ownership data sourced from SEC EDGAR REIT 10-K filings
+                {financials?.dataSource && (
+                  <div className="flex items-center gap-2">
+                    <DataTrustBadge source={financials.dataSource} />
+                    {financials.dataSource === 'SEC Filing' && (
+                      <span className="text-xs text-gray-500">Sourced from SEC EDGAR REIT 10-K filings</span>
+                    )}
                   </div>
                 )}
 

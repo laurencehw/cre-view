@@ -103,6 +103,26 @@ CREATE TABLE IF NOT EXISTS analysis_buildings (
     PRIMARY KEY (analysis_id, building_id)
 );
 
+-- ─── Watchlist ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS watchlist_items (
+    user_id          TEXT        NOT NULL,
+    building_id      TEXT        NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, building_id)
+);
+
+-- ─── Saved Searches ──────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS saved_searches (
+    id               TEXT        PRIMARY KEY DEFAULT 'ss_' || substr(uuid_generate_v4()::text, 1, 8),
+    user_id          TEXT        NOT NULL,
+    name             TEXT        NOT NULL,
+    filters          JSONB       NOT NULL DEFAULT '{}',
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_saved_searches_user
+    ON saved_searches (user_id);
+
 -- ─── Updated-at trigger ───────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$

@@ -2,6 +2,8 @@
 
 import type { Building } from '@/lib/types';
 import { formatCurrency } from '@/lib/format';
+import BuildingImage from '@/components/BuildingImage';
+import WatchlistButton from '@/components/WatchlistButton';
 
 interface BuildingGridProps {
   buildings: Building[];
@@ -25,20 +27,25 @@ function BuildingSummaryCard({
   const city = parts.length >= 2 ? parts[parts.length - 2] : '';
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="text-left rounded-xl border border-gray-800 bg-gray-900/40 p-4 hover:border-gray-600 hover:bg-gray-900/60 transition-all group"
-    >
+    <div className="rounded-xl border border-gray-800 bg-gray-900/40 hover:border-gray-600 hover:bg-gray-900/60 transition-all group overflow-hidden">
+      <button type="button" onClick={onClick} className="w-full text-left">
+        <BuildingImage building={building} className="w-full" height="120px" />
+      </button>
+      <div className="p-4">
       <div className="flex items-start justify-between gap-2 mb-2">
-        <h3 className="font-semibold text-sm group-hover:text-brand-400 transition-colors leading-tight">
-          {building.name}
-        </h3>
-        {city && (
-          <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">
-            {city}
-          </span>
-        )}
+        <button type="button" onClick={onClick} className="text-left flex-1">
+          <h3 className="font-semibold text-sm group-hover:text-brand-400 transition-colors leading-tight">
+            {building.name}
+          </h3>
+        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {city && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">
+              {city}
+            </span>
+          )}
+          <WatchlistButton buildingId={building.id} size="sm" />
+        </div>
       </div>
       <p className="text-xs text-gray-500 mb-3 truncate">{building.address}</p>
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400">
@@ -49,7 +56,8 @@ function BuildingSummaryCard({
       {building.owner && building.owner !== 'Unknown' && (
         <p className="text-xs text-gray-500 mt-2 truncate">Owner: {building.owner}</p>
       )}
-    </button>
+      </div>
+    </div>
   );
 }
 
